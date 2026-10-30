@@ -39,6 +39,7 @@
         var pb = null; // {items: [{archivo, tipo, motivo, hasta}], wait_h}: what is going to be deleted by itself
         var sel = {}; // archivo -> true
         var filtro = "";
+        var rango = null; // the time range of the search (workshopRangePicker): null = no limit in time
         var busFoco = false;
         var viendo = null; // {tipo, item}
         var msg = "", msgOk = true;
@@ -336,8 +337,9 @@
             return;
           }
           var f = filtro.trim().toLowerCase();
+          var ahora = new Date();
           function passes(x) {
-            return !f || (nameOf(x) + " " + (x.start || x.ts || "")).toLowerCase().indexOf(f) >= 0;
+            return (!f || (nameOf(x) + " " + (x.start || x.ts || "")).toLowerCase().indexOf(f) >= 0) && workshopRangeHas(rango, x.start || x.ts, ahora);
           }
 
           // -- en grande + editor --
@@ -347,6 +349,8 @@
           var chosen = Object.keys(sel).filter(function (k) { return sel[k]; });
           var bar = cameraEl("div", "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;");
           bar.appendChild(bus);
+          // search by date: the timelapses (start) or the captures (ts) inside a range, like the one of CloudWatch (04-range-picker.js)
+          bar.appendChild(workshopRangePicker({ value: rango, clearable: true, onChange: function (nv) { rango = nv; render(); } }));
           if (busFoco) {
             busFoco = false; // seguir escribiendo despues de filtrar
             setTimeout(function () { bus.focus(); bus.setSelectionRange(bus.value.length, bus.value.length); }, 0);

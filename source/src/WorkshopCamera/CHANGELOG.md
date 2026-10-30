@@ -1,5 +1,13 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.11.5 -- 2026-10-30
+
+- The flash button shows on and off clearly
+
+## 2.11.4 -- 2026-10-30
+
+- The gallery searches captures and timelapses by date (range picker)
+
 ## 2.11.3 -- 2026-10-30
 
 - Manifest: sbcRequired true (needs WorkshopService); side bar keeps the group names

@@ -21,6 +21,8 @@
 		"badge_live": "EN VIVO",
 		"badge_photo": "FOTO · cada {s} s",
 		"camera_flash": "Flash de la cámara",
+		"flash_is_on": "Flash: encendido",
+		"flash_is_off": "Flash: apagado",
 		"back_to_photo_mode": "Volver a modo foto",
 		"switch_to_live_video": "Pasar a video en vivo",
 		"capturing": "Capturando...",

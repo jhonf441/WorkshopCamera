@@ -443,6 +443,7 @@
         flashBtn.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16" style="pointer-events:none;vertical-align:middle" fill="#000">' +
           '<path d="M7 2v11h3v9l7-12h-4l4-8z"/>' +
+          '<line x1="3" y1="21" x2="21" y2="3" stroke="#ef5350" stroke-width="2.5"/>' +
           "</svg>";
         flashBtn.style.cssText = [
           "position:absolute",
@@ -452,7 +453,7 @@
           "height:26px",
           "border-radius:50%",
           "border:none",
-          "background:#fbc02d",
+          "background:#37474f",
           "color:#000",
           "font-size:14px",
           "line-height:26px",
@@ -463,6 +464,7 @@
           "z-index:1",
           "display:none",
         ].join(";");
+        cameraFlashPaint(flashBtn, false);
         panel.appendChild(flashBtn);
 
         flashBtn.addEventListener("pointerdown", function (ev) {
@@ -473,14 +475,14 @@
           ev.stopPropagation();
           if (cameraFlashIsStrip(cameraCurrent)) {
             flashOn = stripFlash.toggle(flashOn);
-            flashBtn.style.background = flashOn ? "#fff59d" : "#fbc02d";
+            cameraFlashPaint(flashBtn, flashOn);
             return;
           }
           if (!cameraHost) return;
           var host = cameraHost;
           var nuevo = !flashOn;
           flashOn = nuevo;
-          flashBtn.style.background = flashOn ? "#fff59d" : "#fbc02d";
+          cameraFlashPaint(flashBtn, flashOn);
           // The camera's native endpoint only turns on the flash if there is ALREADY an active
           // /stream (isStreaming on the ESP32 side) -- that is why
           // this button is only shown once the viewer is
@@ -531,7 +533,7 @@
         function cameraFlashRestore() {
           if (stripFlash.restore()) {
             flashOn = false;
-            flashBtn.style.background = "#fbc02d";
+            cameraFlashPaint(flashBtn, false);
             return;
           }
           if (flashPrevious === null || !flashPreviousHost) return;
@@ -541,11 +543,11 @@
           flashPreviousHost = null;
           if ((v > 0) === flashOn && host === cameraHost) {
             flashOn = false;
-            flashBtn.style.background = "#fbc02d";
+            cameraFlashPaint(flashBtn, false);
             return; // it is already as it was
           }
           flashOn = false;
-          flashBtn.style.background = "#fbc02d";
+          cameraFlashPaint(flashBtn, false);
           fetch("http://" + host + "/control?var=led_intensity&val=" + Math.max(0, Math.min(255, Math.round(v)))).catch(function () {
             /*  the camera did not respond: it stays as it is */
           });
@@ -558,7 +560,7 @@
             if (v === null || flashPrevious !== null || host !== cameraHost) return;
             if (v < 0 && cameraCurrent) { cameraCurrent.flash = false; flashBtn.style.display = "none"; } // the firmware answers -1 when the board has no LED
             flashOn = v > 0;
-            flashBtn.style.background = flashOn ? "#fff59d" : "#fbc02d";
+            cameraFlashPaint(flashBtn, flashOn);
           });
         }
 
@@ -702,7 +704,7 @@
             cameraHost = u.host;
             cameraHostLive = u.esp32 ? u.host : null;
             flashOn = false;
-            flashBtn.style.background = "#fbc02d";
+            cameraFlashPaint(flashBtn, false);
             img.alt = camera.name;
             cameraCurrent = camera;
             zoom.reset();

@@ -1,0 +1,12 @@
+# Name,   Type,  SubType, Offset,   Size,    Flags
+# Dos ranuras de aplicacion (ota_0 / ota_1) para actualizar por WiFi:
+# el firmware nuevo se escribe en la ranura libre y recien al terminar bien
+# se arranca desde ahi (si falla, sigue la vieja). (2026-10-09: la tabla
+# anterior tenia UNA sola ranura -- por eso el OTA nunca podia funcionar,
+# este archivo le gana a la opcion PartitionScheme del IDE.)
+nvs,      data,  nvs,     0x9000,   0x5000,
+otadata,  data,  ota,     0xe000,   0x2000,
+app0,     app,   ota_0,   0x10000,  0x1E0000,
+app1,     app,   ota_1,   0x1F0000, 0x1E0000,
+coredump, data,  coredump,0x3D0000, 0x10000,
+spiffs,   data,  spiffs,  0x3E0000, 0x20000,

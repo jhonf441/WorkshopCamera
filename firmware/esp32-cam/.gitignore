@@ -1,0 +1,4 @@
+secrets.h
+build/
+ota/espota.py
+ota/*.bin

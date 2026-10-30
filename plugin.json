@@ -2,7 +2,7 @@
   "id": "WorkshopCamera",
   "name": "Camera",
   "author": "jhonf441",
-  "version": "2.11.2",
+  "version": "2.11.3",
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/jhonf441/WorkshopCamera",
   "tags": [
@@ -12,6 +12,12 @@
   "dwcDependencies": [
     "WorkshopService"
   ],
-  "sbcRequired": false,
-  "data": {}
+  "sbcRequired": true,
+  "sbcDsfVersion": "3.6",
+  "data": {},
+  "sdFiles": [],
+  "dwcFiles": [
+    "js/WorkshopCamera.fb3819cb.js",
+    "js/WorkshopCamera.fb3819cb.js.gz"
+  ]
 }

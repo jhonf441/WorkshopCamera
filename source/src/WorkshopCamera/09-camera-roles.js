@@ -3,27 +3,30 @@
       // The SERVICE decides who may do what (permissions.py); this only hides what the role cannot do and writes the rest in plain
       // words. Four views, from the identity of workshopIdentity() (01-api-auth.js):
       //   full        no identity yet, or a service without users or older than the roles: everything, as before (compatibility)
-      //   technician  technician and admin: everything (settings, the list of cameras with their addresses, orientation, schedule, limits)
+      //   technician  technician and admin: everything (settings, the list of cameras with their addresses, orientation, schedule, limits, start / stop of the system relay)
       //   operator    operator: see the cameras, capture, timelapse (start / stop / watch), gallery; no technical terms
+      // Where each feature lives (informe-07): the floating viewer only LOOKS (view, mosaic, zoom, flash, the quick capture and the button that
+      // opens the page); the page of the plugin (17-gallery.js, 18-page-*.js) holds the rest: gallery and timelapse (operator), settings, cameras,
+      // focus and relay (technician).
       //   viewer      a viewer WITH the camera enabled for visitors (camera_for_viewer): only watches
       //   denied      a viewer without the camera: no viewer, a clear message instead of an error
       // Pure functions first (tests/camera-roles.test.js loads this file alone); the ones that touch the page are at the end.
 
-      var CAMERA_RELAY_PROTO = 2; // the contract with the relay (port 8090) this page was written for; camera_proto.py PROTO in the service
+      var CAMERA_RELAY_PROTO = 3; // the contract with the relay (port 8090) this page was written for; camera_proto.py PROTO in the service (3: the writes are API operations)
 
       var CAMERA_VIEW_FEATURES = {
         denied: [],
         viewer: ["view", "mosaic", "zoom"],
-        operator: ["view", "mosaic", "zoom", "capture", "timelapse", "gallery"],
-        technician: ["view", "mosaic", "zoom", "capture", "timelapse", "gallery", "settings", "cameras", "tech_terms", "focus"],
+        operator: ["view", "mosaic", "zoom", "capture", "timelapse", "gallery", "flash"], // flash: camera.flash is an operation of the operator
+        technician: ["view", "mosaic", "zoom", "capture", "timelapse", "gallery", "flash", "settings", "cameras", "tech_terms", "focus", "relay"],
       };
       CAMERA_VIEW_FEATURES.full = CAMERA_VIEW_FEATURES.technician;
 
       function cameraViewOf(identity) {
-        if (!identity || !identity.table || !identity.role || identity.compat || identity.configured === false) return "full";
-        if (identity.role === "viewer") return identity.user && identity.user.camera ? "viewer" : "denied";
-        if (identity.role === "operator") return "operator";
-        return "technician";
+        var role = workshopIdentityView(identity); // 01-identity-view.js
+        if (role === "full") return "full";
+        if (role === "viewer") return identity.user && identity.user.camera ? "viewer" : "denied";
+        return role === "operator" ? "operator" : "technician";
       }
 
       function cameraFeatureIn(view, feature) {
@@ -36,11 +39,6 @@
         if (!state) return "unknown";
         var p = typeof state.proto === "number" ? state.proto : 1;
         return p === CAMERA_RELAY_PROTO ? "ok" : p < CAMERA_RELAY_PROTO ? "service_old" : "plugin_old";
-      }
-
-      // The route that saves a photo: the current name from proto 2 on; the older relay only knows the Spanish one.
-      function cameraCapturePathFor(state) {
-        return cameraProtoCheck(state) === "service_old" ? "/capturar" : "/capture";
       }
 
       // One short line in everyday words for a camera of /state (no fps, no kB/s, no relay): what the operator needs is whether it works.
@@ -71,13 +69,11 @@
       }
 
       // Shows or hides the controls of the floating panel for the view; repaints when the person logs in or out.
-      // parts = { gear, capture, timelapse } (the buttons of buildCameraPanel).
+      // parts = { capture, page } (the quick capture and the button to the page: the only buttons of buildCameraPanel that depend on the role).
       function cameraRoleBind(panel, parts) {
         function apply() {
-          parts.gear.style.display = cameraCanDo("cameras") ? "" : "none";
           parts.capture.style.display = cameraCanDo("capture") ? "" : "none";
-          parts.timelapse.style.display = cameraCanDo("timelapse") ? "" : "none";
-          if (parts.focus) parts.focus.style.display = cameraCanDo("focus") ? "" : "none";
+          parts.page.style.display = cameraPageLinkShown(cameraCanDo("gallery"), cameraPageRegistered) ? "flex" : "none"; // 18-page-tabs.js
         }
         apply();
         if (typeof workshopOnIdentity !== "function") return;
@@ -97,11 +93,6 @@
         } else if (!cameraPanelEl) {
           createCameraWidgets();
         }
-        var sheets = [CAMERA_GALLERY_ID, CAMS_SHEET_ID, CAMERA_SHEET_ID];
-        sheets.forEach(function (id) {
-          var s = document.getElementById(id);
-          if (s && !cameraCanDo(id === CAMERA_GALLERY_ID ? "gallery" : "cameras")) s.remove();
-        });
       }
 
       function cameraRemovePanel() {

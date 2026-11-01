@@ -1,5 +1,8 @@
-      // ---- 2. Floating camera panel ----
+      // ---- 2. Floating camera panel (the viewer) ----
       //
+      // informe-07: the viewer is for LOOKING: the picture, close, resize, zoom, the camera selector, the photo / live-video button, the flash
+      // (when the camera has one and the view can), the mosaic of all the cameras, the quick capture (the owner's decision) and ONE button that opens the
+      // page of the plugin (capture, timelapse, cameras, image settings, focus, relay, gallery: 17-gallery.js and 18-page-*.js).
       // 2026-10-08 (v3): there is NO round floating button (FAB) any more. The
       // launcher is the camera icon of the sidebar (section 0):
       // it opens/closes this panel, which still floats and can be dragged over
@@ -10,31 +13,21 @@
       // its display is toggled (the same "never destroy" pattern that avoided the
       // duplicate copies of v1).
 
-      var CAMERA_PANEL_ID = "emergency-fab-cam-panel";
-      var CAMERA_W = 240;
-      var CAMERA_H = 160;
+      var CAMERA_PANEL_ID = "workshop-camera-panel";
+      var CAMERA_W = 340; // wide enough for the four round buttons of the bottom row and the label of the button to the page
+      var CAMERA_H = 226;
       var CAMERA_MIN_W = 120;
       var CAMERA_MIN_H = 80;
       var CAMERA_MAX_W = 640;
       var CAMERA_MAX_H = 480;
-      var CAMERA_SIZE_KEY = "emergencyFabCamSize";
-      var CAMERA_EXPANDED_KEY = "emergencyFabCamExpanded";
+      var CAMERA_SIZE_KEY = "workshopCameraSize";
+      var CAMERA_EXPANDED_KEY = "workshopCameraExpanded";
+      var CAMERA_POS_KEY = "workshopCameraPos";
 
       var cameraPanelEl = null;
       var cameraStopStreamFn = null;
       var cameraStartModeFn = null;
       var CAMERA_SNAPSHOT_POLL_MS = 3000;
-
-      // Keys of v2 (Hide/Reactivate of the circles) -- they no longer
-      // mean anything; they are deleted so that they do not stay dangling.
-      try {
-        localStorage.removeItem("emergencyFabCamClosed");
-        localStorage.removeItem("emergencyFabJogClosed");
-        localStorage.removeItem("emergencyFabCamFabPos");
-        localStorage.removeItem("emergencyFabJogFabPos");
-      } catch (e) {
-        /* no critico */
-      }
 
       function isCameraExpanded() {
         try {
@@ -50,9 +43,9 @@
         } catch (e) {
           /*  could not be remembered -- it still expands for this session */
         }
-        if (cameraPanelEl) { cameraPanelEl.style.display = ""; cameraReclampPanel(); cameraCloseBarIfNarrow(); }
+        if (cameraPanelEl) { cameraPanelEl.style.display = ""; cameraReclampPanel(); workshopAnnouncePanelOpened("camera"); } // a phone: the open Controls bar would cover the viewer
         workshopNotify();
-        cameraStateWatch(true); // 13-service.js: fps / reconectando / quien mira
+        cameraStateRead(); // 13-service.js: once per opening, the relay says whether this camera has a flash (the page keeps its own 3 s read)
         // It always starts in photo mode -- see startSnapshotMode() inside
         // buildCameraPanel. Video mode is only activated with the
         // button next to the flash, never on its own.
@@ -63,14 +56,6 @@
       // the anti-keyboard burst is not needed (nobody touched anything).
       function cameraCollapse(silent) {
         if (!silent) workshopWithoutTouchGhost(); // the closing tap must not reach what is under the panel
-        cameraCloseSheet();
-        // the gear's "Cameras" sheet (12-cameras.js) also goes away with the
-        // viewer (BUG 2026-10-10: it stayed open by itself when closing the camera)
-        var sheetCams = document.getElementById(CAMS_SHEET_ID);
-        if (sheetCams) sheetCams.remove();
-        var galeria = document.getElementById(CAMERA_GALLERY_ID);
-        if (galeria) galeria.remove();
-        cameraStateWatch(false);
         try {
           localStorage.setItem(CAMERA_EXPANDED_KEY, "0");
         } catch (e) {
@@ -119,9 +104,10 @@
       }
 
 
-      // Whether a camera address was already resolved on loading this tab
-      // (null = still loading). Used by the launcher's text (20-main.js).
-      var cameraWasEnabledAtLoad = null;
+      // What the service says about the camera, judged with the list (cameraStartupStateCameras, 19-startup.js): "configured" | "missing" (no
+      // camera has an address yet: there is no viewer) | "na" (the service does not answer: the viewer is built anyway and says so).
+      // null = not asked yet. The text of the launcher reads it (20-main.js).
+      var cameraAddressState = null;
 
       function createCameraWidgets() {
         if (pluginStopped) return;
@@ -133,14 +119,13 @@
         // asked for while the panel is open (see cameraExpand/cameraCollapse).
         // 2026-10-12: the address comes only from the own list
         // (cameras.json, 12-cameras.js), no longer from DWC's webcam.
-        cameraLoadList().then(function () {
-          var url = cameraUrlMain();
-          if (cameraWasEnabledAtLoad === null) cameraWasEnabledAtLoad = !!url;
+        cameraLoadList().then(cameraStartupRelay).then(function (relay) {
+          cameraAddressState = cameraStartupStateCameras(cameraList, relay);
           workshopNotify();
-          if (!url) return;
+          if (cameraAddressState === "missing") return; // no camera yet: no viewer (the page "Timelapses and captures" adds the first one)
           if (pluginStopped) return;
           if (document.getElementById(CAMERA_PANEL_ID)) return;
-          buildCameraPanel(url);
+          buildCameraPanel(cameraUrlMain());
           if (isCameraExpanded()) {
             cameraExpand();
           } else {
@@ -149,6 +134,12 @@
           // several cameras (12-cameras.js): the one chosen on this screen
           if (cameraChangeFn) cameraChangeFn(cameraChosen());
         });
+      }
+
+      // The first camera was saved (or the address changed): ask the service again and, if there is a camera now, the viewer appears.
+      function cameraRefreshAddress() {
+        cameraStartupRelayMemo.t = 0; // 19-startup.js: the memo of camera.status is stale now
+        createCameraWidgets();
       }
 
       function isCameraOpen() {
@@ -164,7 +155,7 @@
       // When opened, the panel returns to its saved position but without leaving
       // the window (which may have changed size while it was closed).
       function cameraReclampPanel() {
-        var saved = loadPos("emergencyFabCamPos");
+        var saved = loadPos(CAMERA_POS_KEY);
         var l = saved ? saved.left : cameraPanelEl.offsetLeft;
         var t = saved ? saved.top : cameraPanelEl.offsetTop;
         cameraPanelEl.style.left = clamp(l, MARGIN, window.innerWidth - cameraPanelEl.offsetWidth - MARGIN) + "px";
@@ -188,23 +179,7 @@
         var esEsp32 = true; // the main one (ESP32-camera through the relay) until another is chosen
         var cameraCurrent = null; // the camera of the list that is being seen (12-cameras.js)
 
-        var panel = document.createElement("div");
-        panel.id = CAMERA_PANEL_ID;
-        panel.style.cssText = [
-          "position:fixed",
-          "width:" + savedSize.w + "px",
-          "height:" + savedSize.h + "px",
-          "z-index:2147483646",
-          "background:#000",
-          "border:2px solid #fff",
-          "border-radius:8px",
-          "box-shadow:0 2px 10px rgba(0,0,0,0.5)",
-          "overflow:hidden;box-sizing:border-box;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px)", // never bigger than the window (phone, rotation)
-          "touch-action:none;overscroll-behavior:contain", // it is dragged with the finger: the page behind must not scroll
-          "-webkit-user-select:none",
-          "user-select:none",
-          "cursor:move",
-        ].join(";");
+        var panel = cameraPanelBox(savedSize); // 11-panel-parts.js
 
         var img = document.createElement("img");
         img.alt = i18nT('main.camera');
@@ -224,26 +199,7 @@
         // "Retry" button, centered -- it ONLY appears if the live video
         // mode fails (see startLiveMode). Photo mode retries by
         // itself on the next tick, without asking for a tap.
-        var viewBtn = document.createElement("button");
-        viewBtn.type = "button";
-        viewBtn.textContent = i18nT('camera.retry');
-        viewBtn.style.cssText = [
-          "position:absolute",
-          "left:50%",
-          "top:50%",
-          "transform:translate(-50%,-50%)",
-          "padding:10px 16px",
-          "border-radius:20px",
-          "border:none",
-          "background:#1976d2",
-          "color:#fff",
-          "font-size:13px",
-          "white-space:nowrap",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-          "display:none",
-        ].join(";");
+        var viewBtn = cameraRetryButton(); // 11-panel-parts.js
         panel.appendChild(viewBtn);
 
         var connectTimeoutId = null;
@@ -303,9 +259,6 @@
         // cameraStartModeFn (= startSnapshotMode) to start again,
         // always in photo mode, the next time it is opened.
         cameraStopStreamFn = function () {
-          focusTool.quiet();
-          cameraFlashRestore(); // 2026-10-11: the flash goes back to how it was
-          flashSynchronized = false;
           liveMode = false; cameraLiveId = null;
           stopSnapshotMode();
           if (connectTimeoutId) {
@@ -344,89 +297,14 @@
             connectTimeoutId = null;
           }
           img.style.setProperty("display", "block", "important");
-          flashBtn.style.display = cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
-          if (cameraHost && esEsp32) cameraReapplySaved(cameraHost);
-          // once per opening (in photo mode "load" arrives with every frame)
-          if (cameraHost && esEsp32 && !cameraFlashIsStrip(cameraCurrent) && cameraHasFlash() && !flashSynchronized) {
-            flashSynchronized = true;
-            cameraFlashSync(cameraHost);
-          }
+          flashBtn.style.display = cameraCanDo("flash") && cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none"; // a viewer has no flash: the relay would refuse it
         });
 
-        // Resize handle (bottom right corner) -- dragging it
-        // changes the panel's width/height, with min/max limits. It uses
-        // ev.stopPropagation() on its own pointer events so that the
-        // panel's drag-to-move (above, via makeDraggable) does not
-        // fire at the same time.
-        var resizeHandle = document.createElement("div");
-        resizeHandle.style.cssText = [
-          "position:absolute",
-          "right:0",
-          "bottom:0",
-          "width:22px",
-          "height:22px",
-          "cursor:nwse-resize",
-          "touch-action:none",
-          "background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.65) 50%)",
-        ].join(";");
-        panel.appendChild(resizeHandle);
+        cameraResizeHandle(panel); // 11-panel-parts.js: the corner that resizes the viewer
 
-        var resizing = false;
-        var resizePointerId = null;
-        var resizeStartX = 0;
-        var resizeStartAnd = 0;
-        var resizeStartW = 0;
-        var resizeStartH = 0;
-
-        resizeHandle.addEventListener("pointerdown", function (ev) {
-          ev.stopPropagation();
-          ev.preventDefault(); // ver nota en viewBtn pointerdown (EmergencyFab camara)
-          resizing = true;
-          resizePointerId = ev.pointerId;
-          resizeStartX = ev.clientX;
-          resizeStartAnd = ev.clientY;
-          resizeStartW = panel.offsetWidth;
-          resizeStartH = panel.offsetHeight;
-          resizeHandle.setPointerCapture(resizePointerId);
-        });
-
-        resizeHandle.addEventListener("pointermove", function (ev) {
-          if (!resizing || ev.pointerId !== resizePointerId) return;
-          ev.stopPropagation();
-          var dw = ev.clientX - resizeStartX;
-          var dh = ev.clientY - resizeStartAnd;
-          var maxW = Math.min(CAMERA_MAX_W, window.innerWidth - panel.offsetLeft - MARGIN);
-          var maxH = Math.min(CAMERA_MAX_H, window.innerHeight - panel.offsetTop - MARGIN);
-          var newW = clamp(resizeStartW + dw, CAMERA_MIN_W, maxW);
-          var newH = clamp(resizeStartH + dh, CAMERA_MIN_H, maxH);
-          panel.style.width = newW + "px";
-          panel.style.height = newH + "px";
-        });
-
-        function endResize(ev) {
-          if (!resizing || ev.pointerId !== resizePointerId) return;
-          resizing = false;
-          ev.stopPropagation();
-          try {
-            resizeHandle.releasePointerCapture(resizePointerId);
-          } catch (e) {
-            /* ya liberado */
-          }
-          saveSize(CAMERA_SIZE_KEY, panel.offsetWidth, panel.offsetHeight);
-        }
-        resizeHandle.addEventListener("pointerup", endResize);
-        resizeHandle.addEventListener("pointercancel", endResize);
-
-        // Flash button (top left) -- turns the camera's own white
-        // LED on/off via /control?var=led_intensity. It is no longer
-        // sent directly to the ESP32: the stream goes through the Pi's relay
-        // (see camera_relay.py), which also forwards /control to the
-        // real ESP32 -- so the flash hits the SAME host:port
-        // as the video (the relay), not the ESP32 directly. It is important to use
-        // .host (host:port) and not .hostname (which loses the relay's :8090
-        // and ended up hitting the Pi's port 80 -- bug
-        // confirmed live 2026-10-07, the LED never turned on from the
-        // button even though /control worked fine tested by hand with curl).
+        // Flash button (top left): the service holds the flash (camera.flash, informe-06 B-P5): it switches the LED of the camera or the work lights and
+        // remembers it, and it switches it off when nobody looks at the camera any more, so this viewer keeps no "how it was before" and puts nothing
+        // back when it closes. The button asks and paints what the service answers.
         var cameraHost = null;
         try {
           cameraHost = new URL(url, window.location.href).host;
@@ -473,95 +351,33 @@
         });
         flashBtn.addEventListener("pointerup", function (ev) {
           ev.stopPropagation();
-          if (cameraFlashIsStrip(cameraCurrent)) {
-            flashOn = stripFlash.toggle(flashOn);
-            cameraFlashPaint(flashBtn, flashOn);
-            return;
-          }
-          if (!cameraHost) return;
-          var host = cameraHost;
-          var nuevo = !flashOn;
-          flashOn = nuevo;
+          var camera = cameraCurrent;
+          if (!camera) return;
+          var wanted = !flashOn;
+          flashOn = wanted;
           cameraFlashPaint(flashBtn, flashOn);
-          // The camera's native endpoint only turns on the flash if there is ALREADY an active
-          // /stream (isStreaming on the ESP32 side) -- that is why
-          // this button is only shown once the viewer is
-          // connected (see startViewing/viewBtn), never before.
-          // 2026-10-11 (reported: "I closed with the x and the flash stayed
-          // on"): the Pi's relay keeps the ESP32's stream
-          // open for everyone, so closing this viewer does not turn off the
-          // flash. The first time it is tapped, how it was is remembered
-          // (another viewer may be watching with the light on) and on closing
-          // it returns to that value (camFlashRestaurar).
-          var before = flashPrevious === null ? cameraFlashRead(host) : Promise.resolve(null);
-          before.then(function (v) {
-            if (flashPrevious === null && flashPreviousHost === null) {
-              flashPrevious = v === null ? (nuevo ? 0 : 255) : v;
-              flashPreviousHost = host;
+          cameraFlashSet(camera, wanted).then(function (r) {
+            if (camera !== cameraCurrent) return;
+            if (!r.ok) { // the light did not change (the service refused or the camera did not answer): the button does not say it did
+              flashOn = !wanted;
+              cameraFlashPaint(flashBtn, flashOn);
+              notify(r.error || i18nT('camera.could_not_switch_the_flash'));
+              return;
             }
-            return fetch("http://" + host + "/control?var=led_intensity&val=" + (nuevo ? 255 : 0));
-          }).catch(function () {
-            /*  the camera did not respond -- not critical, the button can be tapped again */
+            flashFromRecord();
           });
         });
 
-        // Camera flash (2026-10-11): value it had before THIS
-        // viewer touched it (null = not touched) and its camera.
-        var flashPrevious = null;
-        var stripFlash = cameraStripFlash(); // 11-panel-parts.js: the light strip used as flash
-        var flashPreviousHost = null;
-        var flashSynchronized = false; // the real flash was already read on this opening
-        // led_intensity actual del ESP32 (/status), o null si no contesta
-        function cameraFlashRead(host) {
-          var ctl = typeof AbortController === "function" ? new AbortController() : null;
-          var t = ctl ? setTimeout(function () { ctl.abort(); }, 1500) : null;
-          return fetch("http://" + host + "/status", { cache: "no-store", signal: ctl ? ctl.signal : undefined })
-            .then(function (r) { return r.json(); })
-            .then(function (s) {
-              if (t) clearTimeout(t);
-              var v = Number(s && s.led_intensity);
-              return isFinite(v) ? v : null;
-            })
-            .catch(function () {
-              if (t) clearTimeout(t);
-              return null;
-            });
+        // what the service says about the flash of the camera that is being seen: the state of the relay when it has one (read when the viewer
+        // opens), else the record of the list
+        function flashOfCurrent() {
+          var e = cameraStateOf(cameraRelayId(cameraCurrent));
+          return (e && e.flash) || (cameraCurrent && cameraCurrent.flash) || null;
         }
-        // when closing the viewer or changing camera: the flash returns to how it
-        // was before being touched here (off if it was off; on if
-        // another had it on)
-        function cameraFlashRestore() {
-          if (stripFlash.restore()) {
-            flashOn = false;
-            cameraFlashPaint(flashBtn, false);
-            return;
-          }
-          if (flashPrevious === null || !flashPreviousHost) return;
-          var v = flashPrevious;
-          var host = flashPreviousHost;
-          flashPrevious = null;
-          flashPreviousHost = null;
-          if ((v > 0) === flashOn && host === cameraHost) {
-            flashOn = false;
-            cameraFlashPaint(flashBtn, false);
-            return; // it is already as it was
-          }
-          flashOn = false;
-          cameraFlashPaint(flashBtn, false);
-          fetch("http://" + host + "/control?var=led_intensity&val=" + Math.max(0, Math.min(255, Math.round(v)))).catch(function () {
-            /*  the camera did not respond: it stays as it is */
-          });
-        }
-        // on opening: the button shows how the flash really is (another
-        // viewer may have left it on)
-        function cameraFlashSync(host) {
-          if (flashPrevious !== null) return;
-          cameraFlashRead(host).then(function (v) {
-            if (v === null || flashPrevious !== null || host !== cameraHost) return;
-            if (v < 0 && cameraCurrent) { cameraCurrent.flash = false; flashBtn.style.display = "none"; } // the firmware answers -1 when the board has no LED
-            flashOn = v > 0;
-            cameraFlashPaint(flashBtn, flashOn);
-          });
+        function flashFromRecord() {
+          var f = flashOfCurrent();
+          flashOn = !!(f && f.on);
+          cameraFlashPaint(flashBtn, flashOn);
         }
 
         // Mode button (next to the flash) -- alternates between photo
@@ -616,73 +432,9 @@
           }
         });
 
-        // Settings gear (2026-10-09, see 15-settings.js): image profiles
-        // + fine adjustment, saved for all screens.
-        var gearBtn = document.createElement("button");
-        gearBtn.type = "button";
-        gearBtn.title = i18nT('common.camera_settings');
-        gearBtn.innerHTML =
-          '<svg viewBox="0 0 24 24" width="15" height="15" style="pointer-events:none;vertical-align:middle" fill="#000">' +
-          '<path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.5.5 0 00.12-.64l-1.92-3.32a.5.5 0 00-.6-.22l-2.39.96a7.03 7.03 0 00-1.63-.94l-.36-2.54A.5.5 0 0013.9 2h-3.84a.5.5 0 00-.49.42l-.36 2.54c-.59.24-1.13.56-1.63.94l-2.39-.96a.5.5 0 00-.6.22L2.67 8.48a.5.5 0 00.12.64l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.5.5 0 00-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.38 1.04.7 1.63.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 00-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/>' +
-          "</svg>";
-        gearBtn.style.cssText = [
-          "position:absolute",
-          "left:64px",
-          "top:4px",
-          "width:26px",
-          "height:26px",
-          "border-radius:50%",
-          "border:none",
-          "background:#e0e0e0",
-          "color:#000",
-          "line-height:26px",
-          "text-align:center",
-          "padding:0",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-        ].join(";");
-        panel.appendChild(gearBtn);
-        gearBtn.addEventListener("pointerdown", function (ev) {
-          ev.stopPropagation();
-          ev.preventDefault(); // ver nota en viewBtn pointerdown
-        });
-        gearBtn.addEventListener("pointerup", function (ev) {
-          ev.stopPropagation();
-          cameraOpenList(panel); // camaras + ajustes de imagen (ESP32-camera)
-        });
-        if (cameraHost) cameraWatchSuggested(cameraHost);
-        cameraHostLive = cameraHost;
 
-        // Camera selector (top, center): only with 2 or more cameras.
-        var selector = document.createElement("div");
-        selector.style.cssText =
-          "position:absolute;left:94px;right:34px;top:4px;display:none;gap:4px;justify-content:center;overflow-x:auto;z-index:1;scrollbar-width:none;";
-        panel.appendChild(selector);
-        function renderSelector() {
-          selector.textContent = "";
-          selector.style.display = cameraList.length > 1 ? "flex" : "none";
-          var current = cameraChosen();
-          cameraList.forEach(function (c) {
-            var b = document.createElement("button");
-            b.type = "button";
-            b.textContent = c.name;
-            b.title = c.name;
-            var on = c === current;
-            b.style.cssText =
-              "flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;height:24px;padding:0 9px;border-radius:12px;border:1px solid rgba(255,255,255,0.6);font:bold 11px Roboto,sans-serif;cursor:pointer;touch-action:none;" +
-              (on ? "background:#1976d2;color:#fff;" : "background:rgba(0,0,0,0.55);color:#eceff1;");
-            b.addEventListener("pointerdown", function (ev) {
-              ev.stopPropagation();
-              ev.preventDefault(); // ver nota en viewBtn pointerdown
-            });
-            b.addEventListener("pointerup", function (ev) {
-              ev.stopPropagation();
-              if (!on) cameraChoose(c.id);
-            });
-            selector.appendChild(b);
-          });
-        }
+        // Camera selector (top, center): only with 2 or more cameras (11-panel-parts.js).
+        var renderSelector = cameraSelectorAssemble(panel);
         renderSelector();
 
         // Changing camera: it cuts what is being seen and starts the new one
@@ -702,11 +454,9 @@
             snapshotUrl = u.photo;
             esEsp32 = u.esp32;
             cameraHost = u.host;
-            cameraHostLive = u.esp32 ? u.host : null;
-            flashOn = false;
-            cameraFlashPaint(flashBtn, false);
             img.alt = camera.name;
             cameraCurrent = camera;
+            flashFromRecord();
             zoom.reset();
             zoom.orient(cameraOrientOf(camera)); // girar / espejar (16-orientation.js)
             updateModeBtn();
@@ -715,14 +465,14 @@
           });
         };
 
-        // ---- Bottom (2026-10-10): capture, mosaic, zoom and relay state ----
-        // flash: only if the camera has it (detected by the relay or when adding it)
+        // flash: only if the camera has it (the relay detects it: capable false = it has none; not known yet = the button shows)
         function cameraHasFlash() {
           if (cameraFlashIsStrip(cameraCurrent)) return true; // the light strip is the flash: it does not depend on the camera having an LED
-          if (cameraCurrent && cameraCurrent.flash === false) return false;
-          var e = cameraStateOf(cameraRelayId(cameraCurrent || { id: "main", url: "" }));
-          return !(e && e.flash === false);
+          var f = flashOfCurrent();
+          return !(f && f.capable === false);
         }
+
+        // ---- Bottom row: quick capture, mosaic, zoom, and the way to the page ----
         var botonAbajo = cameraBottomButton.bind(null, panel); // 11-panel-parts.js
         var noticeThe = document.createElement("div");
         noticeThe.setAttribute("data-workshop-i18n", "");
@@ -742,76 +492,23 @@
         botonAbajo(34, i18nT('camera.all_cameras_grid'), '<path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>', function () { cameraOpenMosaic(); });
         botonAbajo(64, i18nT('camera.zoom_in_digital_zoom'), '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>', function () { zoom.more(); });
         botonAbajo(94, i18nT('camera.zoom_out'), '<path d="M19 13H5v-2h14v2z"/>', function () { zoom.minus(); });
-        // Manual timelapse (14-timelapse.js): one tap starts (cameras and arming
-        // from the settings), another tap stops; red while recording
-        var tlBtn = botonAbajo(124, i18nT('camera.timelapse_start_or_stop_cameras_and'),
-          '<circle cx="12" cy="12" r="7"/>',
-          function () { cameraPanelTimelapse(notify); });
-        var focusTool = cameraFocusAssemble(panel, img, { // 11-focus.js
-          isLive: function () { return liveMode; }, startLive: startLiveMode, startSnapshot: startSnapshotMode,
-          stopSnapshot: stopSnapshotMode, photoUrl: function () { return snapshotUrl; }, notify: notify, button: botonAbajo,
-        });
-        cameraRoleBind(panel, { gear: gearBtn, capture: capBtn, timelapse: tlBtn, focus: focusTool.button }); // 09-camera-roles.js: what each view shows
-        var stateThe = document.createElement("div");
-        stateThe.setAttribute("data-workshop-i18n", "");
-        stateThe.style.cssText =
-          "position:absolute;left:186px;right:26px;bottom:8px;font:11px Roboto,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none;z-index:1;";
-        panel.appendChild(stateThe);
+        // the way to the page of the plugin (18-page-tabs.js): capture, timelapse, cameras, image settings, focus, relay and the gallery live there
+        var pageBtn = cameraPageButton(panel);
+        cameraRoleBind(panel, { capture: capBtn, page: pageBtn }); // 09-camera-roles.js: what each view shows
+        // what depends on the camera that is being seen: the quick capture needs the relay, the flash needs the camera to have one and the view to allow it
         function paintDown() {
-          var rid = cameraRelayId(cameraCurrent || { id: "main", url: "" });
+          var rid = cameraRelayId(cameraCurrent);
           capBtn.style.opacity = rid ? "1" : "0.4";
-          var e = rid ? cameraStateOf(rid) : null;
-          var grabando = !!(cameraState && cameraState.timelapse && cameraState.timelapse.recording);
-          tlBtn.style.background = grabando ? "#e53935" : "#e0e0e0";
-          tlBtn.firstChild.setAttribute("fill", grabando ? "#fff" : "#c62828");
-          tlBtn.title = grabando ? i18nT('camera.timelapse_recording_tap_to_stop') : i18nT('camera.timelapse_start_or_stop_cameras_and');
-          stateThe.textContent = rid ? cameraStateText(e) : "";
-          stateThe.style.color = cameraStateColor(e);
-          if (img.style.display === "block" || img.style.getPropertyValue("display") === "block") flashBtn.style.display = cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
+          var shown = img.style.display === "block" || img.style.getPropertyValue("display") === "block";
+          if (shown) flashBtn.style.display = cameraCanDo("flash") && cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
+          flashFromRecord(); // the relay was read again: the button says what the service says
         }
         cameraStateListeners.push(paintDown);
         paintDown();
 
-        // Close button (top right) -- closes the panel (display:
-        // none, it does not delete it from the DOM) and cuts this screen's image
-        // request. It is opened again from the camera icon of the
-        // sidebar. It does NOT touch the Pi's relay (that is the GLOBAL action).
-        var closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.title = i18nT('camera.close_camera');
-        // SVG instead of emoji -- the same reason as the flash button.
-        closeBtn.innerHTML =
-          '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#fff">' +
-          '<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>' +
-          "</svg>";
-        closeBtn.style.cssText = [
-          "position:absolute",
-          "right:4px",
-          "top:4px",
-          "width:26px",
-          "height:26px",
-          "border-radius:50%",
-          "border:none",
-          "background:rgba(0,0,0,0.6)",
-          "color:#fff",
-          "font-size:14px",
-          "line-height:26px",
-          "text-align:center",
-          "padding:0",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-        ].join(";");
-        panel.appendChild(closeBtn);
-
-        closeBtn.addEventListener("pointerdown", function (ev) {
-          ev.stopPropagation();
-          ev.preventDefault(); // ver nota en viewBtn pointerdown
-        });
-        closeBtn.addEventListener("pointerup", function (ev) {
-          ev.stopPropagation();
-          cameraCollapse();
-        });
+        // Close button (top right) -- closes the panel (display: none, it does not delete it from the DOM) and cuts this screen's image
+        // request. It is opened again from the camera icon of the sidebar. It does NOT touch the Pi's relay (that is the GLOBAL action).
+        cameraCloseButton(panel, cameraCollapse); // 11-panel-parts.js
 
         // If the image fails AFTER tapping "View camera" -- most
         // likely another tab already holds the only /stream slot
@@ -834,5 +531,5 @@
 
         document.body.appendChild(panel);
         cameraPanelEl = panel;
-        makeDraggable(panel, "emergencyFabCamPos", savedSize.w, savedSize.h, 16, 16, null);
+        makeDraggable(panel, CAMERA_POS_KEY, savedSize.w, savedSize.h, 16, 16, null);
       }

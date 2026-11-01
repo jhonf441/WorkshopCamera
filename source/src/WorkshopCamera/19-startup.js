@@ -7,19 +7,14 @@
       //   that goes through the relay: never an error).
       // The camera has no macros and no example files (nothing in sd/), so no row is a file. Nothing here writes anything.
 
-      // Pure: {configured|missing|na} from the camera list (cameraList) and the relay status (camera.status, null = unknown).
-      // The Main camera with an empty address reads the relay's camera (config.json camera_relay.url of the service).
+      // Pure: {configured|missing|na} from the camera list (cameraList, the service's) and the relay status (camera.status, null = unknown).
+      // The list comes from the service: when it does not answer there is no list to judge ("na"; its own row says so).
       function cameraStartupStateCameras(items, relay) {
+        if (!relay || relay.error) return "na";
         var own = (items || []).some(function (c) {
           return String((c && c.url) || "").trim() !== "";
         });
-        if (own) return "configured";
-        var main = (items || []).some(function (c) {
-          return c && c.id === "main";
-        });
-        if (!main) return "missing";
-        if (!relay || relay.error) return "na"; // the service does not answer: its own row says so
-        return relay.url ? "configured" : "missing";
+        return own ? "configured" : "missing";
       }
 
       // Pure: the relay is optional. Grey if no camera goes through it (usaRelay false) or the service does not answer.
@@ -129,10 +124,15 @@
       var CAMERA_STARTUP_GROUP_CAPTURES = { id: "captures", label: "startup_camera.g_captures", description: "startup_camera.g_captures_desc", icon: "file" };
       var CAMERA_STARTUP_GROUP_TIMELAPSE = { id: "timelapse", label: "startup_camera.g_timelapse", description: "startup_camera.g_timelapse_desc", icon: "service" };
 
+      // What the cameras are for: the viewer, and the Workbench only while that plugin is there (read every time the row is drawn)
+      function cameraStartupForKey() {
+        return workshopPluginActive("workbench") ? "startup_camera.cameras_for" : "startup_camera.cameras_for_no_workbench";
+      }
+
       var CAMERA_STARTUP_ROWS = [
         {
           id: "cameras",
-          label: "startup_camera.cameras", what: "startup_camera.cameras_what", why: "startup_camera.cameras_for", ifMissing: "startup_camera.cameras_missing",
+          label: "startup_camera.cameras", what: "startup_camera.cameras_what", get why() { return cameraStartupForKey(); }, ifMissing: "startup_camera.cameras_missing",
           help: "startup_camera.cameras_tip",
           texts: { configured: "startup_camera.cameras_ok", missing: "startup_camera.cameras_missing" },
           check: function () {

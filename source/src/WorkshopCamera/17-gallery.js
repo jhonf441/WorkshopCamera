@@ -1,25 +1,28 @@
       // ---- "Timelapses and captures" page (Plugins, 2026-10-10) ----
       //
       // Request: "how are timelapses managed: delete, edit, download;
-      // there should be something that extends those functions". The viewer's sheet
-      // stays for quick things; here: view large, rename, download, delete
+      // there should be something that extends those functions". Here: view large, rename, download, delete
       // several, and edit a video (trim and change speed: the Pi builds
       // a NEW one and the original stays). Everything lives in the Pi's relay.
+      // informe-07: the page is the home of everything of the camera that is not just looking. Its tabs are listed in 18-page-tabs.js
+      // (record, studio, videos, captures, cameras, image, settings); the floating viewer only looks and has a button that opens this page.
 
       var CAMERA_GAL_PATH = "/Plugins/Timelapses";
+      var cameraGalleryPage = null; // the page that is mounted ({destroy}); the plugin's stop destroys it (13-service.js cameraCloseOpenViews)
+      var cameraPageRegistered = false; // the route of the page was registered (the viewer shows its button to the page only then)
+
+      // The saved files and the relay's state: what the page loads. A list is null when the relay does not answer.
+      // withPerDelete: also what the relay is going to delete by itself.
+      function cameraGalleryLoad(withPerDelete) {
+        return Promise.all([cameraRelayList("video"), cameraRelayList("photo"), cameraStateRead(), withPerDelete ? cameraRelayPerDelete() : null]).then(function (r) {
+          return { timelapses: r[0], captures: r[1], state: r[2], perDelete: r[3] };
+        });
+      }
 
       function cameraDate(ts) {
         var d = new Date(ts * 1000);
         var dd = function (n) { return (n < 10 ? "0" : "") + n; };
         return dd(d.getDate()) + "/" + dd(d.getMonth() + 1) + " " + dd(d.getHours()) + ":" + dd(d.getMinutes());
-      }
-
-      function cameraPost(path) {
-        return fetch(cameraRelayBase() + path, { method: "POST" }).then(function (r) {
-          return r.json().catch(function () {
-            return { ok: false, error: "HTTP " + r.status };
-          });
-        });
       }
 
       // Start-up chip (19-startup.js): the same one as the Cameras sheet, in the page header next to the other chips; its rows are the captures
@@ -44,11 +47,9 @@
         var viendo = null; // {tipo, item}
         var msg = "", msgOk = true;
         var timer = null, puesta = cameraStartupCreate(); // puesta: start-up chip in the header, see cameraGalStartupAssemble
-        // Tabs (2026-10-10, "turn it around and redesign timelapse"; "what is
-        // in the camera button has to be the same and complete here"):
-        // Record, Videos, Captures and Settings.
-        var TL_PEST_KEY = "workshopTlTab";
-        var pestana = cameraGalleryTab(TL_PEST_KEY); // the saved tab (13-service-views.js)
+        // Tabs (18-page-tabs.js): the saved one if this view may use it
+        var pestana = cameraGalleryTab(CAMERA_PAGE_TAB_KEY); // 13-service-views.js
+        var pageState = {}; // what the tabs of cameras and image keep between redraws (18-page-cameras.js); cameraPageForget empties it
         var cfg = null, borrador = null; // ajustes del servicio
         function loadCfg() {
           return cameraService(null)
@@ -63,16 +64,11 @@
         }
 
         function load() {
-          return Promise.all([
-            fetch(cameraRelayBase() + "/timelapses", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return null; }),
-            fetch(cameraRelayBase() + "/captures", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return null; }),
-            cameraStateRead(),
-            fetch(cameraRelayBase() + "/per_delete", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
-          ]).then(function (r) {
-            pb = r[3];
-            tls = r[0];
-            caps = r[1];
-            est = r[2];
+          return cameraGalleryLoad(true).then(function (g) {
+            pb = g.perDelete;
+            tls = g.timelapses;
+            caps = g.captures;
+            est = g.state;
             return tls === null && caps === null ? cameraNoCameraProbe() : false;
           }).then(function (none) { noCam = !!none; render(); });
         }
@@ -84,12 +80,9 @@
         function nameOf(x) {
           return x.name || x.job || x.file;
         }
-        function src(kind, file) {
-          return cameraRelayBase() + (kind === "video" ? "/timelapses/" : "/captures/") + encodeURIComponent(file);
-        }
         function download(kind, file) {
           var a = document.createElement("a");
-          a.href = src(kind, file) + "?download=1";
+          a.href = cameraRelayMediaUrl(kind, file) + "?download=1";
           a.setAttribute("download", file);
           document.body.appendChild(a);
           a.click();
@@ -99,7 +92,7 @@
           notice(i18nT('gallery.deleting_n', { n: items.length }));
           var p = Promise.resolve();
           items.forEach(function (a) {
-            p = p.then(function () { return cameraPost("/remove?file=" + encodeURIComponent(a)); });
+            p = p.then(function () { return cameraRelayRemove(a); });
           });
           p.then(function () {
             sel = {};
@@ -109,7 +102,7 @@
           });
         }
         function rename(item, n) {
-          cameraPost("/rename?file=" + encodeURIComponent(item.file) + "&name=" + encodeURIComponent(n)).then(function (d) {
+          cameraRelayRename(item.file, n).then(function (d) {
             notice(d.ok ? i18nT('gallery.name_changed') : i18nT('common.couldn_t_error', { error: d.error || "" }), d.ok);
             load();
           });
@@ -118,7 +111,7 @@
         function keep(items, value) {
           var p = Promise.resolve();
           items.forEach(function (a) {
-            p = p.then(function () { return cameraPost("/keep?file=" + encodeURIComponent(a) + "&value=" + (value ? 1 : 0)); });
+            p = p.then(function () { return cameraRelayKeep(a, value); });
           });
           p.then(function () {
             notice(value ? (items.length > 1 ? i18nT('gallery.kept_n', { n: items.length }) : i18nT('gallery.kept_it_won_t_be_deleted')) : i18nT('gallery.no_longer_kept'));
@@ -154,9 +147,10 @@
           return cameraBtn(t, estilo, fn);
         }
         function irPestana(k) {
-          pestana = (k === "settings" || k === "studio") && !cameraCanDo("settings") ? "record" : k;
+          pestana = cameraPageTabsFor(cameraCanDo).indexOf(k) >= 0 ? k : "record";
           viendo = null;
-          try { localStorage.setItem(TL_PEST_KEY, k); } catch (e) { /* no critico */ }
+          cameraPageForget(pageState);
+          try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, pestana); } catch (e) { /* no critico */ }
           render();
         }
         var navPlegada = false, navFija = cameraNavPinGet(); // the bar folds to its icons after a choice unless it is pinned
@@ -189,38 +183,18 @@
             chip(i18nT('common.videos') + " " + (t.videos_gb != null ? t.videos_gb : "?") + (cfg ? "/" + (cfg.timelapses_gb || 5) : "") + " GB", "gris", function () { irPestana("settings"); }, i18nT('gallery.where_and_how_much_is_stored'));
             chip(i18nT('gallery.free') + " " + (t.disk_free_gb != null ? t.disk_free_gb : "?") + " GB", t.disk_free_gb != null && t.disk_free_gb < 4 ? "red" : "gris");
           }
-          var bAct = cameraBtn(i18nT('common.refresh'), "", function () { load(); loadCfg(); puesta.refresh(); });
+          var bAct = cameraBtn(i18nT('common.refresh'), "", function () { cameraPageForget(pageState); load(); loadCfg(); puesta.refresh(); });
           cab.appendChild(puesta.el); cab.appendChild(bAct);
           hc.appendChild(cab);
           page.appendChild(hc); cameraGalStartupAssemble(puesta);
           if (noCam) return cameraNoCameraPage(page, function () { noCam = false; load(); loadCfg(); puesta.refresh(); });
-          // side bar of the page (same measures as the bar of Vision): Record / Videos / Captures / Settings
+          // side bar of the page (same measures as the bar of Vision): the tabs of 18-page-tabs.js; it folds to the icons after choosing
           page.classList.add("ctl-with-nav");
-          tabs = cameraEl("nav", "");
-          tabs.className = "wf-nav ctl-nav" + (navPlegada ? " collapsed" : "");
-          // folds to the icons after choosing; opens again (over the page) with the pointer or the focus
-          // the double arrow (as in the bar of Vision): folds the bar to its icons or opens it for good
-          var plegar = cameraEl("button", "");
-          plegar.type = "button";
-          plegar.className = "ctln-fold"; plegar.title = i18nT("common.fold_bar"); plegar.setAttribute("aria-label", plegar.title); // QA-11: icon-only button needs a name
-          plegar.appendChild(cameraEl("span", "")).className = "mdi " + (navPlegada ? "mdi-chevron-double-right" : "mdi-chevron-double-left");
-          plegar.addEventListener("click", function () { navPlegada = !navPlegada; render(); });
-          tabs.appendChild(cameraNavHead(navFija, navPlegada, plegar, function () { navFija = !navFija; cameraNavPinSet(navFija); render(); })); // pin + fold arrow
-          [
-            ["record", "mdi-record-rec", i18nT('gallery.record')],
-            ["studio", "mdi-movie-edit-outline", i18nT('studio.nav')],
-            ["videos", "mdi-movie-open-outline", i18nT('common.videos') + (tls ? " (" + tls.length + ")" : "")],
-            ["captures", "mdi-image-multiple-outline", i18nT('common.captures') + (caps ? " (" + caps.length + ")" : "")],
-            ["settings", "mdi-cog-outline", i18nT('common.settings')],
-          ].filter(function (k) { return (k[0] !== "settings" && k[0] !== "studio") || cameraCanDo("settings"); }).forEach(function (k) {
-            var b = cameraEl("button", "");
-            b.className = "wf-nav-item ctl-nav-item" + (pestana === k[0] ? " on" : "");
-            b.type = "button";
-            b.title = k[2];
-            b.appendChild(cameraEl("span", "")).className = "wf-nav-icon mdi " + k[1];
-            b.appendChild(cameraEl("span", null, k[2])).className = "tx";
-            b.addEventListener("click", function () { if (!navFija) navPlegada = true; irPestana(k[0]); });
-            tabs.appendChild(b);
+          tabs = cameraPageNav({
+            tab: pestana, folded: navPlegada, pinned: navFija, tls: tls, caps: caps,
+            onFold: function () { navPlegada = !navPlegada; render(); },
+            onPin: function () { navFija = !navFija; cameraNavPinSet(navFija); render(); },
+            onTab: function (id) { if (!navFija) navPlegada = true; irPestana(id); },
           });
           page.appendChild(tabs);
           // banners and messages like a dense text v-alert (.ctl-alert)
@@ -231,6 +205,8 @@
           if (pestana === "record") return renderRecord();
           if (pestana === "settings" && cameraCanDo("settings")) return renderSettings();
           if (pestana === "studio" && cameraCanDo("settings")) return cameraStudioPage(page, ctx());
+          if (pestana === "cameras" && cameraCanDo("cameras")) return cameraCamerasTab(page, ctx()); // 18-page-cameras.js
+          if (pestana === "image" && cameraCanDo("cameras")) return cameraImageTab(page, ctx()); // 18-page-image.js
           renderItems(pestana === "videos" ? "video" : "photo");
         }
 
@@ -249,8 +225,8 @@
             cols.appendChild(c);
             return c;
           }
-          var c1 = cardG("mdi-record-rec", i18nT('common.timelapse'));
-          c1.appendChild(cameraTlBox(function () { load(); }));
+          // start / stop the timelapse and the capture of each camera: the operator's, as the buttons of the viewer used to be (09-camera-roles.js)
+          if (cameraCanDo("timelapse")) cardG("mdi-record-rec", i18nT('common.timelapse')).appendChild(cameraTlBox(function () { load(); }));
           if (t0 && t0.recording) {
             // live: the latest photo of each camera being recorded
             var cv = cardG("mdi-eye-outline", i18nT('gallery.live'));
@@ -285,13 +261,17 @@
           }
           // captura ahora, de cualquier camara del relay
           var cs = (est && est.cameras) || [];
-          if (cs.length) {
+          if (cs.length && cameraCanDo("capture")) {
             c2.appendChild(cameraEl("div", "font-weight:bold;margin-top:6px;", i18nT('gallery.capture_now')));
             var fc = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
             cs.forEach(function (c) {
               fc.appendChild(boton(c.name, "", function () {
-                cameraCapture(c.id)
-                  .then(function () { notice(i18nT('gallery.capture_saved') + " " + c.name); load(); })
+                cameraRelayCapture(c.id)
+                  .then(function (d) {
+                    if (!d.ok) return notice(i18nT('common.couldn_t_error', { error: d.error || "" }), false);
+                    notice(i18nT('gallery.capture_saved') + " " + c.name);
+                    load();
+                  })
                   .catch(function (e) { notice(i18nT('common.couldn_t_error', { error: String(e.message || e) }), false); });
               }));
             });
@@ -304,7 +284,7 @@
 
         // what the Studio and the Settings tab share: the draft, the saved settings and how to save or drop the draft (18-tl-studio-cards.js)
         function ctx() {
-          return { draft: borrador, cfg: cfg, est: est, rerender: render, notice: notice, reload: load, go: irPestana,
+          return { draft: borrador, cfg: cfg, est: est, rerender: render, notice: notice, reload: load, go: irPestana, state: pageState, startup: puesta,
             saved: function (c) { cfg = c; borrador = JSON.parse(JSON.stringify(c)); }, discard: function () { borrador = JSON.parse(JSON.stringify(cfg)); } };
         }
 
@@ -391,7 +371,7 @@
           var c = cameraEl("div", "");
           c.className = "ctl-mini" + (sel[x.file] ? " sel" : "");
           var im = cameraEl("img", "width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#000;cursor:pointer;");
-          im.src = kind === "video" ? cameraRelayBase() + "/timelapses/" + encodeURIComponent(x.thumbnail || x.miniatura) : src("photo", x.file);
+          im.src = kind === "video" ? cameraRelayThumbUrl(x) : cameraRelayMediaUrl("photo", x.file);
           im.loading = "lazy";
           cameraOwnError(im); // appended below: the note needs the parent
           im.addEventListener("click", function () {
@@ -429,10 +409,10 @@
           if (kind === "video") {
             media = cameraEl("video", "width:100%;max-height:70vh;border-radius:6px;background:#000;");
             media.controls = true;
-            media.src = src("video", x.file);
+            media.src = cameraRelayMediaUrl("video", x.file);
           } else {
             media = cameraEl("img", "width:100%;max-height:70vh;object-fit:contain;border-radius:6px;background:#000;");
-            media.src = src("photo", x.file);
+            media.src = cameraRelayMediaUrl("photo", x.file);
           }
           izq.appendChild(media);
           cameraOwnError(media);
@@ -499,7 +479,7 @@
           box.appendChild(info);
           box.appendChild(boton(i18nT('gallery.create_the_edited_video'), "background:#1976d2;color:#fff;", function () {
             if (e.until !== null && e.until <= e.since + 0.2) return notice(i18nT('gallery.the_end_has_to_be_after'), false);
-            cameraPost("/edit?file=" + encodeURIComponent(x.file) + "&since=" + e.since.toFixed(2) + (e.until !== null ? "&until=" + e.until.toFixed(2) : "") + "&speed=" + e.speed).then(function (d) {
+            cameraRelayEdit(x.file, e).then(function (d) {
               notice(d.ok ? i18nT('gallery.the_system_is_building_the_edited') : i18nT('common.couldn_t_error', { error: d.error || "" }), d.ok);
               if (d.ok) setTimeout(load, 4000);
             });
@@ -511,24 +491,38 @@
         load();
         loadCfg();
         var busyBefore = false;
-        timer = setInterval(function () {
+        timer = cameraGalleryPoll(function (d) {
+          est = d || est;
+          var t = d && d.timelapse;
+          var busy = !!(t && (t.recording || t.assembling || t.editing));
+          // algo cambia en la Pi, o recien termino de armarse un video
+          if ((busy || busyBefore) && cameraPageReloads(pestana)) load(); // the tabs that hold what is being typed are not redrawn
+          busyBefore = busy;
+        });
+        return cameraGalleryHandle(page, function () { clearInterval(timer); });
+      }
+
+      // Asks the relay's state every 3 s while the page is open (not while the tab is hidden); onState(state) gets each answer. Returns the timer.
+      function cameraGalleryPoll(onState) {
+        return setInterval(function () {
           if (document.hidden) return;
-          cameraStateRead().then(function (d) {
-            est = d || est;
-            var t = d && d.timelapse;
-            var busy = !!(t && (t.recording || t.assembling || t.editing));
-            // algo cambia en la Pi, o recien termino de armarse un video
-            if ((busy || busyBefore) && pestana !== "studio") load(); // the studio keeps what is being edited
-            busyBefore = busy;
-          });
+          cameraStateRead().then(onState);
         }, 3000);
-        return {
+      }
+
+      // What DWC gets for the mounted page: destroy() stops its timer, tears its views down and takes it off the screen. The plugin's stop
+      // calls it too (13-service.js cameraCloseOpenViews).
+      function cameraGalleryHandle(page, stopTimer) {
+        var handle = {
           destroy: function () {
-            clearInterval(timer);
+            stopTimer();
+            if (cameraGalleryPage === handle) cameraGalleryPage = null;
             cameraViewTeardown(page);
             page.remove();
           },
         };
+        cameraGalleryPage = handle;
+        return handle;
       }
 
       function cameraRegisterGallery() {
@@ -541,6 +535,8 @@
             },
             { Plugins: { WorkshopTimelapses: { icon: "mdi-filmstrip", caption: 'plugins.WorkshopCamera.gallery.timelapses_and_captures', path: CAMERA_GAL_PATH } } }
           );
+          cameraPageRegistered = true;
+          workshopOnStop(function () { cameraPageRegistered = false; });
         } catch (e) {
           console.error("[WorkshopCamera] could not register the timelapses page:", e);
         }

@@ -10,19 +10,9 @@
 
       var CAMERA_TL_MAX = 4;
 
-      function cameraTimelapse(action, nombre, extra) {
-        var q = "?action=" + action + (nombre ? "&name=" + encodeURIComponent(nombre) : "") + (extra || "");
-        return fetch(cameraRelayBase() + "/timelapse" + q, { method: "POST" }).then(function (r) {
-          return r.json().catch(function () {
-            return { ok: false, error: "HTTP " + r.status };
-          });
-        });
-      }
-
       function cameraTlNames(ids) {
         var cs = (cameraState && cameraState.cameras) || [];
         return (ids || []).map(function (id) {
-          id = cameraId(id);
           for (var i = 0; i < cs.length; i++) if (cs[i].id === id) return cs[i].name;
           return id;
         });
@@ -33,7 +23,7 @@
         return s >= 3600 ? Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min" : s >= 60 ? Math.floor(s / 60) + " min" : s + " s";
       }
 
-      // Timelapse state + start / stop. It repaints with /estado (every 3 s
+      // Timelapse state + start / stop. It repaints with /state (every 3 s
       // with the viewer open) and stops listening when it leaves the page.
       function cameraTlBox(alFinish) {
         var box = cameraEl("div", "display:flex;flex-direction:column;gap:6px;");
@@ -82,7 +72,7 @@
               busy = true;
               notice = "";
               paint();
-              cameraTimelapse("stop")
+              cameraRelayTimelapse("stop")
                 .then(function (d) {
                   notice = d.ok ? i18nT('timelapse.stopped_the_video_is_built_on') : i18nT('common.couldn_t_error', { error: d.error || "" });
                 })
@@ -117,7 +107,7 @@
                 busy = true;
                 notice = "";
                 paint();
-                cameraTimelapse("begin", nombre.trim())
+                cameraRelayTimelapse("begin", { name: nombre.trim() || null })
                   .then(function (d) {
                     notice = d.ok ? "" : i18nT('common.couldn_t_error', { error: d.error || "" });
                     if (d.ok) nombre = "";
@@ -145,7 +135,7 @@
               ? (pr.until ? i18nT('timelapse.scheduled_starts_and_stops', { start: cameraDateTl(pr.since), end: cameraDateTl(pr.until) }) : i18nT('timelapse.scheduled_starts', { start: cameraDateTl(pr.since) }))
               : (pr.until ? i18nT('timelapse.scheduled_stops', { end: cameraDateTl(pr.until) }) : i18nT('timelapse.scheduled_dot'))));
             tp.appendChild(cameraBtn(i18nT('timelapse.cancel_schedule'), "", function () {
-              cameraTimelapse("unschedule").then(cameraStateRead).then(paint);
+              cameraRelayTimelapse("unschedule").then(cameraStateRead).then(paint);
             }));
             box.appendChild(tp);
           }
@@ -167,7 +157,7 @@
         var inputCss = "width:56px;padding:4px;border-radius:4px;border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;";
         var selCss = "padding:4px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
         // without a saved list it is "camara" (without touching the draft: it does not mark changes)
-        var chosen = t.cameras && t.cameras.length ? t.cameras.slice() : [cameraId(t.camera || "main")];
+        var chosen = t.cameras && t.cameras.length ? t.cameras.slice() : [t.camera || "main"];
         if (!t.armed) t.armed = "separate";
         if (t.segment_s == null) t.segment_s = 4;
         if (t.fade_s == null) t.fade_s = 0.8;
@@ -200,7 +190,7 @@
           return cameraEl("div", "font-weight:bold;color:var(--c-text,#cfd8dc);margin-top:2px;", text);
         }
 
-        // -- camaras --
+        // -- cameras --
         if (verRecord) {
         box.appendChild(title(i18nT('timelapse.cameras_up_to_4')));
         var cs = ((cameraState && cameraState.cameras) || []).map(function (c) {
@@ -434,7 +424,7 @@
             msg.textContent = i18nT('timelapse.choose_the_start_time_the_stop');
             return;
           }
-          cameraTimelapse("schedule", iNom.value.trim(), "&since=" + d + "&until=" + h).then(function (r) {
+          cameraRelayTimelapse("schedule", { name: iNom.value.trim() || null, since: d, until: h }).then(function (r) {
             msg.style.color = r.ok ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)";
             msg.textContent = r.ok ? i18nT('timelapse.scheduled_the_system_starts_and_stops') : i18nT('common.couldn_t') + " " + (r.error || "");
             cameraStateRead();

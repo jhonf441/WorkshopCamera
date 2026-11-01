@@ -1,11 +1,9 @@
-      // ---- Focus assistant (2026-10-23) ----
+      // ---- Focus assistant (2026-10-23; moved from the floating viewer to the tab "Image" of the page by informe-07) ----
       // Sharpness meter for turning the lens by hand: the live video is measured at the centre of the frame (variance of the
-      // Laplacian of a square crop) and the bar shows it against the best value seen since it was opened. Measuring needs the
+      // Laplacian of a square crop) and the bar shows it against the best value seen since it was started. Measuring needs the
       // image to be readable by the page: the displayed <img> is not (a crossorigin image does not send the relay's key cookie and
       // gets a 401), so the frame is downloaded with fetch() (it carries the key, 26-camera-key.js) from the photo address while the
       // live video keeps the relay's last frame fresh.
-      // hooks = { isLive(), startLive(), startSnapshot(), stopSnapshot(), photoUrl(), notify(text), button(left, title, svg, onTap) }
-      // -> { button, quiet() }  (quiet = drop the assistant without touching the stream: it is being cut or changed by someone else)
       // {sharp, dark} of the centre of the image now; null = no frame yet; false = the browser does not let it be read
       function cameraFocusMeasure(img, canvas) {
         var w = img.width, h = img.height;
@@ -41,122 +39,157 @@
         return { sharp: sumsq / n - (sum / n) * (sum / n), dark: total / g.length < 35 };
       }
 
-      // The parts the assistant draws over the panel: the dashed frame and the meter box -> {frame, meter, text, bar, hint, reset}
-      // (reset is the button that restarts the peak: the caller adds its tap action)
-      function cameraFocusParts(panel) {
-        var frame = document.createElement("div");
-        frame.style.cssText = "position:absolute;left:30%;top:30%;width:40%;height:40%;border:2px dashed #fff59d;box-sizing:border-box;pointer-events:none;z-index:1;display:none;";
-        panel.appendChild(frame);
-        var meter = document.createElement("div");
-        meter.setAttribute("data-workshop-i18n", "");
-        meter.style.cssText = "position:absolute;left:34px;right:34px;bottom:64px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,0.75);color:#fff;font:11px Roboto,sans-serif;z-index:2;display:none;pointer-events:none;";
-        var text = document.createElement("div");
-        var barBox = document.createElement("div");
-        barBox.style.cssText = "height:10px;border-radius:5px;background:#37474f;margin:4px 0;overflow:hidden;";
-        var bar = document.createElement("div");
-        bar.style.cssText = "height:100%;width:0;background:#fbc02d;";
-        barBox.appendChild(bar);
-        var hint = document.createElement("div");
-        hint.style.cssText = "color:#b0bec5;";
-        var reset = document.createElement("button");
-        reset.type = "button";
-        reset.style.cssText = "pointer-events:auto;margin-top:4px;border:none;border-radius:10px;padding:2px 8px;background:#e0e0e0;color:#000;font:11px Roboto,sans-serif;cursor:pointer;touch-action:none;";
-        reset.addEventListener("pointerdown", function (ev) { ev.stopPropagation(); ev.preventDefault(); });
-        [text, barBox, hint, reset].forEach(function (n) { meter.appendChild(n); });
-        panel.appendChild(meter);
-        return { frame: frame, meter: meter, text: text, bar: bar, hint: hint, reset: reset };
+      // The assistant of the card that is on screen (the stop of the plugin and the destroy of the page release it; a card that was redrawn
+      // away ends by itself the next time its timer finds the picture off the page).
+      var cameraFocusCurrent = null;
 
+      // One state per card. img = the picture, u = { photo, video } (cameraUrls), ui = the elements it writes to:
+      // { meter, frame, text, bar, hint, note, button }
+      function cameraFocusState(img, u, ui) {
+        return { img: img, u: u, ui: ui, on: false, ended: false, timer: null, photoTimer: null, peak: 0, now: 0, busy: false, failures: 0, canvas: document.createElement("canvas") };
       }
 
-      function cameraFocusAssemble(panel, img, hooks) {
-        var on = false;
-        var timer = null;
-        var peak = 0;
-        var now = 0;
-        var wasLive = false;
-        var busy = false;
-        var failures = 0;
-        var canvas = document.createElement("canvas");
-        var parts = cameraFocusParts(panel);
-        var frame = parts.frame, meter = parts.meter, text = parts.text, bar = parts.bar, hint = parts.hint, reset = parts.reset;
-        reset.addEventListener("pointerup", function (ev) { ev.stopPropagation(); peak = 0; });
+      function cameraFocusEnd(F) {
+        F.ended = true;
+        F.on = false;
+        clearInterval(F.timer);
+        clearTimeout(F.photoTimer);
+        F.timer = null;
+        F.photoTimer = null;
+      }
 
-        function show(m) {
-          now = now ? now * 0.5 + m.sharp * 0.5 : m.sharp;
-          if (now > peak) peak = now;
-          var pct = peak > 0 ? Math.round((now / peak) * 100) : 0;
-          bar.style.width = pct + "%";
-          bar.style.background = pct >= 95 ? "#43a047" : pct >= 75 ? "#fbc02d" : "#e53935";
-          text.textContent = Math.round(now) + "  ·  " + i18nT('camera.focus_best') + " " + Math.round(peak);
-          hint.textContent = m.dark ? i18nT('camera.focus_too_dark') : i18nT('camera.focus_hint');
+      function cameraFocusRelease() {
+        if (cameraFocusCurrent) cameraFocusEnd(cameraFocusCurrent);
+        cameraFocusCurrent = null;
+      }
+
+      function cameraFocusStamp(url) {
+        return url + (url.indexOf("?") < 0 ? "?" : "&") + "_=" + Date.now();
+      }
+
+      // The picture while the assistant is off: a photo that refreshes (the live video only while measuring). A camera with no still image shows its video.
+      function cameraFocusPhoto(F) {
+        clearTimeout(F.photoTimer);
+        F.photoTimer = null;
+        if (F.ended || F.on) return;
+        if (!F.img.isConnected) return cameraFocusEnd(F);
+        if (!F.u.photo) {
+          F.img.src = F.u.video;
+          return;
         }
+        F.img.src = cameraFocusStamp(F.u.photo);
+        F.photoTimer = setTimeout(function () { cameraFocusPhoto(F); }, CAMERA_SNAPSHOT_POLL_MS);
+      }
 
-        // one measurement: downloads the last frame (the relay keeps it fresh while the video is live) and reads its centre
-        function tick() {
-          var url = hooks.photoUrl();
-          if (busy || !url) return;
-          busy = true;
-          fetch(url + (url.indexOf("?") < 0 ? "?" : "&") + "_=" + Date.now(), { cache: "no-store" })
-            .then(function (r) {
-              if (!r.ok) throw new Error("HTTP " + r.status);
-              return r.blob();
-            })
-            .then(function (blob) { return createImageBitmap(blob); })
-            .then(function (bitmap) {
-              busy = false;
-              failures = 0;
-              if (!on) return;
-              var m = cameraFocusMeasure(bitmap, canvas);
-              if (m) show(m);
-            })
-            .catch(function () {
-              busy = false;
-              if (on && ++failures >= 8) stop(i18nT('camera.focus_cannot_measure'));
-            });
+      function cameraFocusShow(F, m) {
+        var ui = F.ui;
+        F.now = F.now ? F.now * 0.5 + m.sharp * 0.5 : m.sharp;
+        if (F.now > F.peak) F.peak = F.now;
+        var pct = F.peak > 0 ? Math.round((F.now / F.peak) * 100) : 0;
+        ui.bar.style.width = pct + "%";
+        ui.bar.style.background = pct >= 95 ? "#43a047" : pct >= 75 ? "#fbc02d" : "#e53935";
+        ui.text.textContent = Math.round(F.now) + "  ·  " + i18nT('image.focus_best') + " " + Math.round(F.peak);
+        ui.hint.textContent = m.dark ? i18nT('image.focus_too_dark') : i18nT('image.focus_hint');
+      }
+
+      // One measurement: downloads the last frame (the relay keeps it fresh while the video is live) and reads its centre.
+      function cameraFocusTick(F) {
+        if (F.ended) return;
+        if (!F.img.isConnected) return cameraFocusEnd(F);
+        var url = F.u.photo ? cameraFocusStamp(F.u.photo) : ""; // the photo address of the relay, with the stamp that makes it a new frame
+        if (F.busy || !url) return;
+        F.busy = true;
+        fetch(url, { cache: "no-store" })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.blob();
+          })
+          .then(function (blob) { return createImageBitmap(blob); })
+          .then(function (bitmap) {
+            F.busy = false;
+            F.failures = 0;
+            if (!F.on) return;
+            var m = cameraFocusMeasure(bitmap, F.canvas);
+            if (m) cameraFocusShow(F, m);
+          })
+          .catch(function () {
+            F.busy = false;
+            if (F.on && ++F.failures >= 8) cameraFocusOff(F, i18nT('image.focus_cannot_measure'));
+          });
+      }
+
+      function cameraFocusOn(F) {
+        var ui = F.ui;
+        if (F.on || F.ended) return;
+        F.on = true;
+        F.peak = 0;
+        F.now = 0;
+        F.failures = 0;
+        clearTimeout(F.photoTimer);
+        F.photoTimer = null;
+        ui.note.textContent = "";
+        ui.text.textContent = "";
+        ui.bar.style.width = "0";
+        ui.hint.textContent = i18nT('image.focus_hint');
+        ui.frame.style.display = "";
+        ui.meter.style.display = "flex";
+        ui.button.classList.add("ctl-on");
+        F.img.src = F.u.video;
+        F.timer = setInterval(function () { cameraFocusTick(F); }, 300);
+      }
+
+      function cameraFocusOff(F, message) {
+        var ui = F.ui;
+        if (!F.on) return;
+        F.on = false;
+        clearInterval(F.timer);
+        F.timer = null;
+        ui.frame.style.display = "none";
+        ui.meter.style.display = "none";
+        ui.button.classList.remove("ctl-on");
+        ui.note.textContent = message || "";
+        F.img.removeAttribute("src");
+        cameraFocusPhoto(F);
+      }
+
+      // The meter under the picture: the numbers, the bar, the hint and the button that restarts the peak -> { meter, text, bar, hint, reset }
+      function cameraFocusMeter(F0) {
+        var meter = cameraEl("div", "display:none;flex-direction:column;gap:4px;");
+        var text = cameraEl("div", "font-weight:500;");
+        var barBox = cameraEl("div", "height:10px;border-radius:5px;background:var(--c-neutro,#37474f);overflow:hidden;");
+        var bar = cameraEl("div", "height:100%;width:0;background:#fbc02d;");
+        barBox.appendChild(bar);
+        var hint = cameraEl("div", "");
+        hint.className = "ctl-muted";
+        var reset = cameraBtn(i18nT('image.focus_reset'), "align-self:flex-start;", function () { F0.peak = 0; });
+        [text, barBox, hint, reset].forEach(function (n) { meter.appendChild(n); });
+        return { meter: meter, text: text, bar: bar, hint: hint, reset: reset };
+      }
+
+      // The card "Preview and focus" of the tab Image: the picture of the camera (a photo every 3 s; the live video while the assistant is on) and,
+      // for the technician (feature "focus") with a camera that has a still image, the sharpness meter. cam = the camera of the list, u = cameraUrls(cam).
+      function cameraFocusCard(grid, cam, u) {
+        cameraFocusRelease();
+        var card = studioCard(grid, "mdi-image-filter-center-focus", i18nT('image.preview'), i18nT('image.preview_hint', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 }));
+        var box = cameraEl("div", "position:relative;");
+        var img = cameraEl("img", "");
+        img.className = "cst-pre";
+        img.alt = cam.name;
+        box.appendChild(img);
+        cameraOwnError(img); // the note goes next to the picture, inside the box
+        var frame = cameraEl("div", "position:absolute;left:30%;top:30%;width:40%;height:40%;border:2px dashed #fff59d;box-sizing:border-box;pointer-events:none;display:none;");
+        box.appendChild(frame);
+        card.appendChild(box);
+        var F = cameraFocusState(img, u, null);
+        cameraFocusCurrent = F;
+        if (cameraCanDo("focus") && u.photo) {
+          var m = cameraFocusMeter(F);
+          var note = cameraEl("div", "");
+          note.className = "ctl-muted";
+          var button = cameraBtn(i18nT('image.focus_assistant'), "align-self:flex-start;", function () { if (F.on) cameraFocusOff(F); else cameraFocusOn(F); });
+          F.ui = { meter: m.meter, frame: frame, text: m.text, bar: m.bar, hint: m.hint, note: note, button: button };
+          [button, note, m.meter].forEach(function (n) { card.appendChild(n); });
         }
-
-        function quiet() {
-          on = false;
-          clearInterval(timer);
-          timer = null;
-          frame.style.display = "none";
-          meter.style.display = "none";
-          btn.style.background = "#e0e0e0";
-        }
-
-        function stop(message) {
-          if (!on) return;
-          quiet();
-          if (!wasLive) {
-            img.removeAttribute("src");
-            hooks.startSnapshot();
-          }
-          if (message) hooks.notify(message);
-        }
-
-        function start() {
-          if (!img.getAttribute("src") && !hooks.isLive()) return; // nothing is being shown yet
-          on = true;
-          peak = 0;
-          now = 0;
-          failures = 0;
-          wasLive = hooks.isLive();
-          reset.textContent = i18nT('camera.focus_reset');
-          text.textContent = "";
-          bar.style.width = "0";
-          hint.textContent = i18nT('camera.focus_hint');
-          frame.style.display = "";
-          meter.style.display = "";
-          btn.style.background = "#fff59d";
-          if (!wasLive) {
-            hooks.stopSnapshot();
-            hooks.startLive();
-          }
-          timer = setInterval(tick, 300);
-        }
-
-        var btn = hooks.button(154, i18nT('camera.focus_assistant'),
-          '<path d="M12 8a4 4 0 100 8 4 4 0 000-8zM5 15H3v4c0 1.1.9 2 2 2h4v-2H5v-4zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4z"/>',
-          function () { if (on) stop(); else start(); });
-        return { button: btn, quiet: quiet };
+        cameraFocusPhoto(F);
+        return F;
       }

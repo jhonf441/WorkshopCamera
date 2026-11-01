@@ -2,7 +2,7 @@
 
 
 
-Two things in one plugin: (a) a floating camera viewer available on every DWC page (live video, photo capture with date, job and position, focus helper, flash / light, orientation, camera list and image profiles) and (b) the page `/Plugins/Timelapses` ("Timelapses and captures") that records timelapses of jobs or by hand, edits them, and manages videos and photos. Recording and video building are done by the System service (camera relay on port 8090 and `ffmpeg`; OpenCV is not needed).
+Two things in one plugin: (a) a floating camera viewer available on every DWC page (live video, photo capture with date, job and position, focus helper, flash / light, orientation, camera list, start / stop of the system relay and image profiles) and (b) the page `/Plugins/Timelapses` ("Timelapses and captures") that records timelapses of jobs or by hand, edits them, and manages videos and photos. Recording and video building are done by the System service (camera relay on port 8090 and `ffmpeg`; OpenCV is not needed).
 
 Version documented: 2.11.x on DWC 3.6.3.
 
@@ -49,7 +49,7 @@ Picture 1: the viewer with its top buttons, the camera selector and the bottom b
 #### Flash
 - What: turns the workshop light strip on for the camera (the ESP32-CAM has no LED of its own). The yellow colour means it is on.
 - Where: lightning button at the top left of the window (picture 1, first button).
-- How: press it to switch the flash on or off.
+- How: press it to switch the flash on or off. The system remembers it and switches it off by itself when nobody looks at the camera any more (or after 10 minutes), so closing the viewer never leaves it on.
 - Watch out: it changes the real lights.
 
 #### Capture a photo
@@ -94,6 +94,12 @@ Picture 2: the sheet "Cameras" opened with the gear: list, orientation and butto
 - Where: sheet "Cameras" (red rectangles, picture 2).
 - How: 1. Press the button. 2. Fill or choose. 3. Save, or cancel.
 - Watch out: Technician role.
+
+#### System relay: state, Stop relay and Start relay
+- What: the relay is the process of the system (port 8090) that shares the camera video with every screen and makes the captures and timelapses. The card "Camera relay (process on the system)" says whether it runs ("Running, 2 watching.", "STOPPED: nobody sees the camera.", "No camera address yet: add a camera first.", or "State unknown: the service did not answer.") and offers "Stop relay" and "Start relay". Only the one that makes sense now is on; the other is grey.
+- Where: sheet "Cameras", under the buttons "+ Add camera", "Search cameras", "Captures and timelapse" and "See all" (not in picture 2).
+- How: 1. Open the sheet with the gear. 2. To stop it press "Stop relay", then press again within 4 s ("Tap again: cut it for EVERYONE"). 3. To start it press "Start relay". 4. The line above is read again a moment later.
+- Watch out: stopping it cuts the camera for EVERYONE watching it now, on every screen, and no capture or timelapse can be made until it starts again. To stop watching only on your screen, close the viewer. Technician role. The same sheet shows, when you edit the Main camera with an empty address, which camera the relay reads and lets you change its address.
 
 #### Orientation
 - What: Auto (uses the Vision calibration, only for the calibrated camera), 0, 90, 180, 270 degrees, Horizontal mirror and Mirror vertically; it applies to this screen only.
@@ -224,7 +230,7 @@ Picture 8: the cards "Recording", "How the video is built" and "Where it's store
 - Watch out: when a limit is exceeded the oldest items are marked for deletion and a phone notification arrives.
 
 #### Phone notifications and Save settings
-- What: photo or video in the alerts, and a warning when a camera stops answering (lower in the page); "Save settings" stores everything in the system for every screen.
+- What: a warning when a camera stops answering (lower in the page; whether an alert carries a photo or a video is chosen per type in the Activity page); "Save settings" stores everything in the system for every screen.
 - Where: bottom of Settings (scroll down; not in the picture).
 - How: tick the options and press "Save settings".
 
@@ -241,11 +247,11 @@ Picture 8: the cards "Recording", "How the video is built" and "Where it's store
 
 ## 5. Roles
 
-Viewer: sees the camera only if "camera for viewers" is on (service Users section); operator: capture, start / stop timelapse; technician: camera list and settings; admin: all. The relay (8090) asks the service who calls. Without users: open.
+Viewer: sees the camera only if "camera for viewers" is on (service Users section); operator: capture, start / stop timelapse; technician: camera list and settings, start / stop of the system relay; admin: all. The relay (8090) asks the service who calls. Without users: open.
 
 ## 6. API operations used
 
-`camera.status`, `camera.service`, `camera.url`, `camera.start`, `camera.stop`, `light.set` (flash), `vision.get`, plus the relay's own endpoints on port 8090 for the video and captures.
+`camera.status` (also the list of cameras), `camera.service`, `camera.detect`, `settings.set` (the list of cameras, `cameras.json`), `camera.start`, `camera.stop`, `camera.flash`, `vision.get`, plus the relay's own endpoints on port 8090 for the video and captures.
 
 ## 7. Troubleshooting
 
@@ -254,6 +260,7 @@ Viewer: sees the camera only if "camera for viewers" is on (service Users sectio
 3. Timelapse does not start: less than 2 GB free, or ffmpeg missing (service preflight shows it).
 4. Video never appears: it is built on the system when it ends (a few minutes); see "The system is building a video: it shows up in Videos when it's done.".
 5. Phone notice "will be deleted": keep or download it within the grace period.
+6. The viewer is black on every screen and the Cameras sheet says "STOPPED": press "Start relay" in that sheet.
 
 <!-- permissions:start -->
 

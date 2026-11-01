@@ -4,7 +4,7 @@
         '<path d="M9.4 4L7.8 6H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-3.8L14.6 4H9.4zM12 9c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm0 2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
 
       // Launcher in the sidebar (WorkshopControlBar), if installed.
-      workshopRegisterPanel("camera", {
+      var CAMERA_PANEL = {
         title: i18nT('main.camera'),
         icon: CAMERA_ICON,
         order: 10,
@@ -13,7 +13,7 @@
         toggle: cameraToggle,
         state: function () {
           var open = isCameraOpen();
-          var noPanel = !cameraPanelEl; // sin direccion de camara (o todavia cargando)
+          var noPanel = !cameraPanelEl; // no camera yet (the service says so) or still loading
           var denied = !cameraCanDo("view"); // a visitor without the camera: a clear message instead of an error (F3-C)
           return {
             open: open,
@@ -21,8 +21,8 @@
             statusText: denied
               ? i18nT('roles.no_permission')
               : noPanel
-              ? cameraWasEnabledAtLoad === false
-                ? i18nT('main.no_camera_address_check_the_list')
+              ? cameraAddressState === "missing"
+                ? i18nT('main.no_camera_yet_add_the_first_one')
                 : i18nT('main.loading')
               : open
               ? i18nT('main.open_on_this_screen')
@@ -32,14 +32,15 @@
               : open ? i18nT('main.camera_this_screen_only_open') : i18nT('main.camera_this_screen_only_tap_to_open'),
           };
         },
-      });
+      };
+      workshopRegisterPanel("camera", CAMERA_PANEL);
       cameraWatchIdentity(); // 09-camera-roles.js: the panel appears or goes away when the person logs in or out
 
       // Without a sidebar installed, the camera shows its own floating button.
-      workshopFallbackLauncher("camera", CAMERA_ICON, i18nT('main.camera'), 10, cameraToggle, isCameraOpen);
+      workshopFallbackLauncher("camera", CAMERA_PANEL);
 
+      cameraRegisterGallery(); // Plugins > Timelapses and captures (17-gallery.js): before the viewer, whose button to the page needs it registered
       workshopWhenReady(createCameraWidgets);
-      cameraRegisterGallery(); // Complementos > Timelapses y capturas (17-gallery.js)
       workshopWatchDom(function () {
         if (cameraPanelEl && !document.getElementById(CAMERA_PANEL_ID)) {
           cameraPanelEl = null;
@@ -57,12 +58,17 @@
       // since 2026-10-09). The camera neither reads nor writes DWC's config any more:
       // it uses only cameras.json (12-cameras.js).
 
+      // the <style> elements only the Camera uses leave the page when it stops (the shared ones go with the last plugin: workshopRemoveLeftovers)
+      var CAMERA_OWN_STYLES = ["workshop-tl-css", "workshop-studio-css"];
+      workshopOwnStyles(CAMERA_OWN_STYLES);
+
       workshopOnStop(function () {
         if (cameraStopStreamFn) cameraStopStreamFn();
+        cameraCloseOpenViews(); // 13-service.js: the mosaic and the page, with their timers
         cameraViewTeardown(null);
         var panel = document.getElementById(CAMERA_PANEL_ID);
         if (panel) panel.remove();
         cameraPanelEl = null;
-        workshopUnregisterPanel("camera");
+        // the launcher panel leaves the registry by itself (workshopRegisterPanel registers that cleanup)
       });
       workshopWatchEnabled();

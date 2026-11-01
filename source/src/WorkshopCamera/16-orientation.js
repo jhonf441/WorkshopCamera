@@ -4,7 +4,7 @@
       // PC than in front of the printer; a manual adjustment and an Auto mode". It is
       // saved per camera and per SCREEN (localStorage): it depends on where the
       // viewer is standing. By hand: rotate 0/90/180/270 and mirror horizontally or
-      // vertically. Auto: Vision (GET :8095/orientacion) knows, through its calibration,
+      // vertically. Auto: Vision (vision.get /orientation) knows, through its calibration,
       // how to leave the image as seen standing in front of the machine (X+ to the
       // right, Y+ toward the back). Only for the camera calibrated in Vision.
 
@@ -35,7 +35,7 @@
         var o = (camera && (t[camera.id] || (camera.id === "main" && t.main))) || null;
         if (!o) return { rotation: 0, h: false, v: false };
         // Auto asks the Vision plugin: without it there is no Auto (the saved choice counts as no rotation)
-        if (o.auto && !workshopPathExists("/Plugins/Vision")) return { rotation: 0, h: false, v: false };
+        if (o.auto && !workshopPluginActive("vision")) return { rotation: 0, h: false, v: false };
         if (o.auto) {
           if (cameraOrientVision && cameraOrientVision.ok) return { rotation: cameraOrientVision.rotation || 0, h: !!cameraOrientVision.mirror, v: false };
           if (!cameraOrientVision) cameraOrientRequestVision();
@@ -58,16 +58,11 @@
           });
       }
 
-      // Controls (in the cameras sheet, for the camera being viewed)
+      // Controls of one camera, for the card "Orientation" of the tab Image (the card says which camera and that it is for this screen only)
       function cameraOrientControls(camera, rerender) {
-        var box = cameraEl("div", "display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);font-size:12px;");
-        var tit = cameraEl("div", "display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;");
-        tit.appendChild(cameraEl("span", "font-weight:bold;font-size:13px;", i18nT('orientation.orientation')));
-        tit.appendChild(cameraEl("span", "color:#b0bec5;", camera.name));
-        tit.appendChild(cameraEl("span", "color:#b0bec5;", i18nT('orientation.this_screen_only')));
-        box.appendChild(tit);
+        var box = cameraEl("div", "display:flex;flex-direction:column;gap:6px;");
         var o = cameraOrientAll()[camera.id] || { rotation: 0, h: false, v: false, auto: false };
-        var hasVision = workshopPathExists("/Plugins/Vision"); // the Auto option and its hints are about the Vision plugin
+        var hasVision = workshopPluginActive("vision"); // the Auto option and its hints are about the Vision plugin
         if (!hasVision && o.auto) o = { rotation: 0, h: false, v: false, auto: false };
         var on = "background:#1976d2;color:#fff;border:1px solid #1976d2;";
         var fila1 = cameraEl("div", "display:flex;gap:4px;flex-wrap:wrap;");
@@ -97,13 +92,13 @@
           box.appendChild(
             cameraEl(
               "div",
-              "color:" + (v && v.ok ? "#a5d6a7" : "#ffb74d") + ";",
+              "color:" + (v && v.ok ? "var(--c-green,#a5d6a7)" : "var(--c-notice,#ffb74d)") + ";",
               !v ? i18nT('orientation.asking_vision') : v.ok ? i18nT('orientation.auto_as_seen_standing_in_front') : i18nT('orientation.auto_not_available', { error: v.error || i18nT('orientation.vision_not_answering') })
             )
           );
-          if (v && v.ok && v.notice) box.appendChild(cameraEl("div", "color:#b0bec5;", v.notice));
+          if (v && v.ok && v.notice) box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", v.notice));
         } else if (hasVision) {
-          box.appendChild(cameraEl("div", "color:#b0bec5;", i18nT('orientation.auto_uses_the_vision_calibration_only')));
+          box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('orientation.auto_uses_the_vision_calibration_only')));
         }
         return box;
       }

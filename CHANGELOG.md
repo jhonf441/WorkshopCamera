@@ -1,5 +1,25 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.11.10 -- 2026-10-31
+
+- Camera: one list of cameras from the service, flash and image settings by the service API, relay writes by the API, no POST to the relay
+
+## 2.11.9 -- 2026-10-31
+
+- The viewer only looks; capture, timelapse, focus, image, cameras and relay live in the plugin page
+
+## 2.11.8 -- 2026-10-31
+
+- Lot 2: one relay client, camera client folder, single gallery, one presence helper, shared resources released at the last plugin, flash for the operator
+
+## 2.11.7 -- 2026-10-31
+
+- Hides what names a plugin that is absent; a plugin is active only by the machine list
+
+## 2.11.6 -- 2026-10-31
+
+- Merged work: config write path, exchange standard, review fixes
+
 ## 2.11.5 -- 2026-10-30
 
 - The flash button shows on and off clearly

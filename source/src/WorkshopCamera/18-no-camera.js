@@ -3,9 +3,10 @@
       // On a fresh install the camera relay (:8090) does not listen until the first camera has an address, so the page "Timelapses and
       // captures" could not read it and looked like a breakdown. When the service says that no camera is configured (camera.status ->
       // configured false, and no camera of its own in the list) that page says so clearly and lets the camera be added right there:
-      // search the network (main action) or type the address of the stream. The search is also a button of the "Cameras" sheet.
+      // search the network (main action) or type the address of the stream. The search is also a button of the tab "Cameras" (18-page-cameras.js).
       // It is made by the browser, asking every address of a PRIVATE network for the stream port of the ESP32-camera (:81), 32 at a time,
-      // so the service needs nothing new. Saving the first camera is the call of the sheet, camera.url (the relay starts by itself).
+      // so the service needs nothing new. Saving the first camera is filling in the address of the "Main" camera of the list (cameras.json: the relay
+// reads it and starts by itself).
 
       var CAMERA_SCAN_PORT = 81;
       var CAMERA_SCAN_PRIVATE = /^(10\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3})$/;
@@ -57,7 +58,7 @@
       }
 
       // Search box: network field + "Search cameras" + one button per camera found. el / btn are the caller's own element and button
-      // makers (the page and the dark sheet look different). o = { primary, inputCss (style of the field), known(url) -> true if already added, pick(url), say(text, ok) }.
+      // makers (cameraEl, cameraBtn). o = { primary, inputCss (style of the field), known(url) -> true if already added, pick(url), say(text, ok) }.
       function cameraScanBox(el, btn, o) {
         var box = el("div", "display:flex;flex-direction:column;gap:6px;");
         var row = el("div", "display:flex;gap:6px;flex-wrap:wrap;align-items:center;");
@@ -87,26 +88,12 @@
             o.say(count ? i18nT("noCamera.scan_found", { n: count }) : i18nT("noCamera.scan_none"), count > 0 ? true : null);
           });
         });
-        row.appendChild(el("span", "color:#b0bec5;font-size:12px;", i18nT("noCamera.network")));
+        row.appendChild(el("span", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT("noCamera.network")));
         row.appendChild(prefix);
         row.appendChild(go);
         box.appendChild(row);
         box.appendChild(results);
         return box;
-      }
-
-      // The search inside the dark "Cameras" sheet: the box with its own status line, built once (the sheet repaints itself often).
-      // o = { known(url), pick(url) }
-      function cameraSheetScan(el, btn, o) {
-        var wrap = el("div", "margin-top:8px;padding:6px;border-radius:6px;background:rgba(255,255,255,0.06);");
-        var status = el("div", "margin-top:4px;font-size:11px;color:#ffe082;");
-        wrap.appendChild(cameraScanBox(el, btn, {
-          inputCss: "padding:5px;border-radius:4px;border:1px solid rgba(255,255,255,0.3);background:#1e272c;color:#fff;font:12px monospace;",
-          known: o.known, pick: o.pick, say: function (text) { status.textContent = text || ""; },
-        }));
-        wrap.appendChild(status);
-        wrap.appendChild(el("div", "margin-top:4px;font-size:10px;color:#b0bec5;", i18nT("noCamera.scan_hint")));
-        return wrap;
       }
 
       // The page itself, below the header (page = the page element, done() reloads the page once the camera is saved)
@@ -132,11 +119,10 @@
         var url = cameraEl("input", CAMERA_CSS_SEL + "width:100%;box-sizing:border-box;");
         function save(u) {
           say(i18nT("common.saving"));
-          workshopApiText("camera.url", { url: u })
-            .then(function (t) {
-              if (/error/i.test(t)) return say(t.trim(), false);
+          cameraAddMain(u)
+            .then(function () {
               say(i18nT("noCamera.saved"), true);
-              setTimeout(done, 2500); // the relay opens its port a moment after the address is saved
+              setTimeout(function () { cameraRefreshAddress(); done(); }, 2500); // the relay opens its port a moment after the address is saved
             })
             .catch(function (e) { say(i18nT("common.could_not_save") + (e && e.message ? e.message : e), false); });
         }

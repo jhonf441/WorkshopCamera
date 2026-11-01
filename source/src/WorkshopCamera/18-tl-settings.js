@@ -83,7 +83,7 @@
           f.appendChild(tx);
           box.appendChild(f);
         });
-        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT(workshopPathExists("/Plugins/Vision") ? 'tlSettings.the_system_service_the_camera_relay' : 'tlSettings.the_system_service_the_camera_relay_no_vision')));
+        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT(workshopPluginActive("vision") ? 'tlSettings.the_system_service_the_camera_relay' : 'tlSettings.the_system_service_the_camera_relay_no_vision')));
         return box;
       }
 
@@ -175,7 +175,6 @@
 
         // 4. Avisos al celular
         var g4 = group("4", i18nT('tlSettings.phone_notifications'), null);
-        g4.appendChild(casilla(i18nT(workshopPathExists("/Plugins/Activity") ? 'tlSettings.camera_photo_or_video_in_the' : 'tlSettings.camera_photo_or_video_in_the_no_activity'), b.photo_notice, function (v) { b.photo_notice = v; }));
         g4.appendChild(casilla(i18nT('tlSettings.notify_if_a_camera_stops_responding'), b.notice_drop, function (v) { b.notice_drop = v; }));
 
         // Save (applies to all the screens)

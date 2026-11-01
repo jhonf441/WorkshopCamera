@@ -1,0 +1,3 @@
+# The camera client (the day's key, the cover of an image that does not load, the ports of the relay and of Vision): the plugins that talk to
+# the relay carry it, the others (control bar, Jog...) do not
+_camera_client

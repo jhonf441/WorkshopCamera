@@ -18,7 +18,7 @@
         c.appendChild(cameraBtn(i18nT("studio.burst_go"), "align-self:flex-start;", function () {
           keep.burstCount = box.t.count;
           keep.burstGap = box.t.gap;
-          cameraPost("/burst?c=" + encodeURIComponent(S.cam || "main") + "&count=" + box.t.count + "&gap=" + box.t.gap).then(function (d) {
+          cameraRelayBurst(S.cam || "main", box.t.count, box.t.gap).then(function (d) {
             S.notice(d.ok ? i18nT("studio.burst_started", { count: d.count }) : i18nT("common.couldn_t_error", { error: d.error || "" }), !!d.ok);
           }).catch(function (e) { S.notice(i18nT("common.couldn_t_error", { error: String(e.message || e) }), false); });
         }));
@@ -31,7 +31,7 @@
         var c = studioCard(parent, "mdi-movie-refresh-outline", i18nT("studio.rebuild"), i18nT("studio.rebuild_hint"));
         var body = cameraEl("div", "display:flex;flex-direction:column;gap:8px;");
         c.appendChild(body);
-        fetch(cameraRelayBase() + "/timelapses", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }).then(function (all) {
+        cameraRelayList("video").then(function (all) {
           var list = (all || []).filter(function (v) { return v.frames_zip; });
           if (!list.length) {
             body.appendChild(cameraEl("div", null, i18nT("studio.rebuild_none"))).className = "ctl-muted";
@@ -48,8 +48,7 @@
           sel.addEventListener("change", function () { keep.rebuild = sel.value; });
           body.appendChild(studioRow(i18nT("studio.rebuild_pick"), sel));
           body.appendChild(cameraBtn(i18nT("studio.rebuild_go"), "align-self:flex-start;", function () {
-            fetch(cameraRelayBase() + "/rerender?file=" + encodeURIComponent(sel.value) + "&cfg=" + encodeURIComponent(JSON.stringify(studioTake(S.t))), { method: "POST" })
-              .then(function (r) { return r.json().catch(function () { return { ok: false, error: "HTTP " + r.status }; }); })
+            cameraRelayRerender(sel.value, studioTake(S.t))
               .then(function (d) {
                 S.notice(d.ok ? i18nT("studio.rebuild_started") : i18nT("common.couldn_t_error", { error: d.error || "" }), !!d.ok);
               })

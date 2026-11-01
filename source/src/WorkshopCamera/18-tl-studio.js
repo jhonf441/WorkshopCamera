@@ -169,7 +169,7 @@
             cameraTlStudio.pending = null;
             if (!img.isConnected) return; // the tab was left while the timer waited
             own.clear();
-            img.src = cameraRelayBase() + "/timelapse/preview?c=" + encodeURIComponent(S.cam) + "&cfg=" + encodeURIComponent(JSON.stringify(studioTake(S.t))) + "&_=" + Date.now();
+            img.src = cameraRelayPreviewUrl(S.cam, studioTake(S.t));
           }, 250);
         }
         img.addEventListener("error", function () { info.textContent = i18nT("studio.preview_unavailable"); });

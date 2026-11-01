@@ -61,8 +61,7 @@
           if (!f) return;
           var rd = new FileReader();
           rd.onload = function () {
-            fetch(cameraRelayBase() + "/luts?name=" + encodeURIComponent(f.name), { method: "POST", body: rd.result })
-              .then(function (r) { return r.json(); })
+            cameraRelayLutSave(f.name, rd.result)
               .then(function (d) {
                 S.notice(d.ok ? i18nT("studio.lut_saved") : i18nT("common.couldn_t_error", { error: d.error || "" }), !!d.ok);
                 if (d.ok) { S.t.lut = f.name; S.reload(); }
@@ -75,7 +74,7 @@
         row.appendChild(cameraBtn(i18nT("studio.lut_upload"), "", function () { file.click(); }));
         if (S.t.lut) {
           row.appendChild(cameraBtnDouble(i18nT("studio.lut_delete"), i18nT("common.delete_confirm"), "", function () {
-            fetch(cameraRelayBase() + "/luts/remove?name=" + encodeURIComponent(S.t.lut), { method: "POST" })
+            cameraRelayLutRemove(S.t.lut)
               .then(function () { S.t.lut = ""; S.reload(); });
           }));
         }
@@ -194,7 +193,7 @@
           draft: c.draft, cfg: c.cfg, est: c.est, rerender: c.rerender, notice: c.notice, reload: c.reload, save: cameraStudioSaver(c),
           undo: function () { c.discard(); c.rerender(); },
           startTake: function (name) {
-            cameraTimelapse("begin", name, "&cfg=" + encodeURIComponent(JSON.stringify(studioTake(c.draft.timelapse))))
+            cameraRelayTimelapse("begin", { name: name || null, cfg: JSON.stringify(studioTake(c.draft.timelapse)) })
               .then(function (d) {
                 c.notice(d.ok ? i18nT('studio.take_started') : i18nT('common.couldn_t_error', { error: d.error || "" }), !!d.ok);
                 if (d.ok) cameraStateRead().then(function () { c.go("record"); c.reload(); });

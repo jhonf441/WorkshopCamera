@@ -43,6 +43,12 @@
           ".ctl-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;}",
           ".ctl-title .mdi{font-size:20px;color:var(--wf-icon,rgba(128,128,128,0.95));}",
           ".ctl-click{cursor:pointer;}",
+          // the groups of the side bar (the family draws their text; the room and the folded look are the page's own) and the count of the library
+          ".ctl-nav .ctl-nav-group{padding:12px 12px 4px;}.ctl-nav.collapsed .ctl-nav-group{visibility:hidden;height:6px;padding:0;overflow:hidden;}",
+          ".ctl-nav-count{margin-left:auto;padding:0 6px;}.ctl-nav.collapsed .ctl-nav-count{display:none;}",
+          "@media (max-width:900px){.ctl-nav .ctl-nav-group,.ctl-nav.collapsed .ctl-nav-group{display:none;}}",
+          // the Live tab: the pictures on the left and the buttons on the right (one column when it is narrow)
+          ".ctl-live-two{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start;}@media (max-width:900px){.ctl-live-two{grid-template-columns:1fr;}}",
           ".ctl-on{border-color:var(--wf-icon,rgba(128,128,128,0.95));font-weight:600;}",
           ".ctl-danger{color:var(--wf-err,#e53935);border-color:var(--wf-err,#e53935);}",
           ".ctl-page .ctl-group-t{font-size:16px;font-weight:600;}",
@@ -63,6 +69,18 @@
           ".ctl.ctl-page{--c-card:#1e1e1e;--c-interna:rgba(128,128,128,0.09);--c-text:#fff;--c-sec:rgba(255,255,255,0.7);--c-field:#1e1e1e;font-size:14px;font-family:Roboto,sans-serif;padding:0;width:100%;box-sizing:border-box;}",
           ".theme--light .ctl.ctl-page{--c-card:#ffffff;--c-interna:#f5f7f8;--c-text:#212121;--c-sec:rgba(0,0,0,0.6);--c-field:#ffffff;}",
           ".ctl-sub{font-size:14px;color:var(--c-sec);}",
+          // the judgement of a picture and the help to bring the camera back (14-health.js, 14-health-recover.js): a sub-card with numbered steps
+          ".ctl-health{display:flex;flex-direction:column;gap:4px;margin-top:6px;}",
+          ".ctl-recover{border-radius:8px;background:rgba(128,128,128,0.07);padding:8px 12px;}",
+          ".ctl-recover>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;}",
+          ".ctl-rsteps{display:flex;flex-direction:column;gap:10px;padding-top:4px;}",
+          ".ctl-rstep{display:flex;flex-direction:column;gap:4px;font-size:13px;}",
+          ".ctl-rstep-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}",
+          ".ctl-rnum{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--c-sec);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}",
+          ".ctl-rhelp>summary{cursor:pointer;font-size:12px;color:var(--c-sec);min-height:28px;display:flex;align-items:center;}",
+          ".ctl-rhelp>div{font-size:12px;padding-left:12px;}",
+          ".ctl-rresult{font-size:12px;color:var(--c-amber);white-space:pre-wrap;}",
+          ".ctl-mono{font-family:monospace;font-size:12px;white-space:pre;padding:6px 8px;border-radius:6px;background:var(--c-interna);}",
         ]);
         document.head.appendChild(st);
       }
@@ -87,108 +105,99 @@
         return box;
       }
 
+      // The section "Storage and system" as ONE card of the family (mockup 2026-11-01): what is used, the fields of the limits in two columns,
+      // the buttons, and the system relay as a subsection (o.relay(card)). The recording and the way the video is built are the form of the Live
+      // tab (cameraTlForm) and the Studio; nothing numbered, no card inside the card.
       // b = draft of the config (modified); cfg = what is saved on the Pi.
-      // o = {rerender, guardar(b) -> Promise, uso: {videos_gb, free_gb, videos, capturas}, columnas}
+      // o = {parent (where the card goes), rerender, save(b), undo(), usage: {videos_gb, free_gb, videos, captures}, relay(card)}
       function cameraSettingsComplete(b, cfg, o) {
-        var rr = o.rerender;
-        var root = cameraEl("div", "display:flex;flex-direction:column;gap:10px;");
-        var grid = cameraEl("div", o.columns ? "display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;align-items:start;" : "display:flex;flex-direction:column;gap:10px;");
-        root.appendChild(grid);
+        var card = studioCard(o.parent, "mdi-harddisk", i18nT('page.store_title'), i18nT('page.store_lead'));
+        var u = o.usage || {};
+        cameraStoreUsage(card, b, u);
+        cameraStoreFields(card, b, u, o.rerender);
+        cameraStoreActions(card, b, cfg, o);
+        if (o.relay) o.relay(card);
+        return card;
+      }
 
-        function group(num, title, sub) {
-          var g = cameraEl("div", "");
-          g.className = o.columns ? "wf-card ctl-gp" : "ctl-group"; // the page: a card of the family; the viewer's sheet: its own panel box
-          var cab = cameraEl("div", "display:flex;align-items:center;gap:8px;");
-          var ix = cameraEl("span", o.columns ? "" : "flex:none;width:22px;height:22px;border-radius:50%;background:var(--c-neutro,#37474f);color:var(--c-blue,#90caf9);display:inline-flex;align-items:center;justify-content:center;font-weight:bold;", num); if (o.columns) ix.className = "wf-index"; cab.appendChild(ix); // the page: the numbered circle of the family; the sheet: its own
-          cab.appendChild(cameraEl("span", "", title)).className = "ctl-group-t";
-          g.appendChild(cab);
-          if (sub) g.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", sub));
-          grid.appendChild(g);
-          return g;
+      // "Free on the system: X GB" with a thin grey bar (what the videos take of the limit chosen for them) and the line of what is stored.
+      function cameraStoreUsage(card, b, u) {
+        var row = cameraEl("div", "display:flex;justify-content:space-between;gap:10px;font-size:13px;");
+        row.appendChild(cameraEl("span", "opacity:.7;", i18nT('tlSettings.free_on_the_system')));
+        row.appendChild(cameraEl("b", null, u.free_gb != null ? u.free_gb + " GB" : "?"));
+        card.appendChild(row);
+        var cap = b.timelapses_gb || 5;
+        var pct = u.videos_gb != null ? Math.max(0, Math.min(100, Math.round((u.videos_gb / cap) * 100))) : 0;
+        var meter = cameraEl("div", "height:8px;border-radius:99px;background:var(--c-interna);border:1px solid var(--c-edge);overflow:hidden;");
+        meter.className = "ctl-meter";
+        meter.title = i18nT('page.store_meter', { used: u.videos_gb != null ? u.videos_gb : "?", cap: cap });
+        meter.appendChild(cameraEl("div", "height:100%;background:var(--wf-icon,rgba(128,128,128,0.95));width:" + pct + "%;"));
+        card.appendChild(meter);
+        var line = [];
+        if (u.videos_gb != null) line.push(i18nT('common.videos') + " " + u.videos_gb + " GB" + (u.videos != null ? " (" + u.videos + ")" : ""));
+        if (u.captures != null) line.push(i18nT('common.captures') + " " + u.captures);
+        if (line.length) card.appendChild(cameraEl("div", "font-size:13px;", line.join(" · ")));
+        card.appendChild(cameraEl("div", null, i18nT('tlSettings.on_the_system_s_card_videos'))).className = "ctl-muted";
+      }
+
+      // A <select> of [value, text] options; a value that is not in the list is added (what is saved always shows).
+      function cameraStoreSelect(options, current, onChange, rr) {
+        var s = cameraEl("select", CAMERA_CSS_SEL + "width:100%;");
+        var has = false;
+        options.forEach(function (op) {
+          var e = cameraEl("option", null, op[1]);
+          e.value = String(op[0]);
+          if (op[0] === current) { e.selected = true; has = true; }
+          s.appendChild(e);
+        });
+        if (!has) {
+          var e2 = cameraEl("option", null, String(current));
+          e2.value = String(current);
+          e2.selected = true;
+          s.appendChild(e2);
         }
-        function casilla(text, value, alChange) {
-          var l = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;cursor:pointer;");
-          var cb = cameraEl("input");
-          cb.type = "checkbox";
-          cb.checked = !!value;
-          cb.style.cssText = "width:18px;height:18px;flex:none;";
-          cb.addEventListener("change", function () { alChange(cb.checked); rr(); });
-          l.appendChild(cb);
-          l.appendChild(cameraEl("span", null, text));
-          return l;
-        }
-        function choose(text, options, current, alChange, after) {
-          var f = cameraEl("div", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;");
-          f.appendChild(cameraEl("span", null, text));
-          var s = cameraEl("select", CAMERA_CSS_SEL);
-          var has = false;
-          options.forEach(function (op) {
-            var e = cameraEl("option", null, op[1]);
-            e.value = String(op[0]);
-            if (op[0] === current) { e.selected = true; has = true; }
-            s.appendChild(e);
-          });
-          if (!has) {
-            var e2 = cameraEl("option", null, String(current));
-            e2.value = String(current);
-            e2.selected = true;
-            s.appendChild(e2);
-          }
-          s.addEventListener("change", function () { alChange(parseFloat(s.value)); rr(); });
-          f.appendChild(s);
-          if (after) f.appendChild(cameraEl("span", "color:var(--c-sec,#b0bec5);", after));
+        s.addEventListener("change", function () { onChange(parseFloat(s.value)); rr(); });
+        return s;
+      }
+
+      // The fields, two columns (one when it is narrow): space for the videos, how many videos and captures, the wait before deleting, the notice.
+      function cameraStoreFields(card, b, u, rr) {
+        var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px;");
+        function field(label, control) {
+          var f = cameraEl("div", "display:flex;flex-direction:column;gap:4px;min-width:0;");
+          f.appendChild(cameraEl("label", "font-size:12px;opacity:.7;", label));
+          f.appendChild(control);
+          grid.appendChild(f);
           return f;
         }
-
-        // 1. Grabacion
-        var g1 = group("1", i18nT('tlSettings.recording'), i18nT('tlSettings.which_cameras_how_often_a_photo'));
-        g1.appendChild(casilla(i18nT('tlSettings.timelapse_of_every_job_starts_and'), b.timelapse.active, function (v) { b.timelapse.active = v; }));
-        g1.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('tlSettings.off_it_only_records_when_you')));
-        g1.appendChild(cameraTlSettings(b.timelapse, rr, "record"));
-
-        // 2. How it is assembled
-        var g2 = group("2", i18nT('common.how_the_video_is_built'), i18nT('tlSettings.when_it_stops_the_system_joins_2'));
-        g2.appendChild(cameraTlSettings(b.timelapse, rr, "video"));
-
-        // 3. Where it is saved
-        var g3 = group("3", i18nT('tlSettings.where_it_s_stored'), null);
-        g3.appendChild(cameraEl("div", null, i18nT('tlSettings.on_the_system_s_card_videos')));
-        var u = o.usage || {};
-        var lineUse = [];
-        if (u.videos_gb != null) lineUse.push(i18nT('common.videos') + ": " + u.videos_gb + " GB" + (u.videos != null ? " (" + u.videos + ")" : ""));
-        if (u.captures != null) lineUse.push(i18nT('common.captures') + ": " + u.captures);
-        if (u.free_gb != null) lineUse.push(i18nT('tlSettings.free_on_the_system') + ": " + u.free_gb + " GB");
-        if (lineUse.length) g3.appendChild(cameraEl("div", "color:var(--c-blue,#90caf9);", lineUse.join(" · ")));
-        // options according to the Pi's space (2026-10-10, "the values
-        // offered must match the free space"): what there is for videos
+        // options according to the Pi's space (2026-10-10, "the values offered must match the free space"): what there is for videos
         // = what they already take + what is free - 2 GB reserve (with less nothing is recorded)
         var tl0 = (typeof cameraState !== "undefined" && cameraState && cameraState.timelapse) || {};
         var used = u.videos_gb != null ? u.videos_gb : tl0.videos_gb;
         var free = u.free_gb != null ? u.free_gb : tl0.disk_free_gb;
         var opsEsp = cameraOptionsSpace(used, free, b.timelapses_gb || 5);
-        g3.appendChild(choose(i18nT('tlSettings.space_for_the_videos'), opsEsp.list, b.timelapses_gb || 5, function (v) { b.timelapses_gb = v || 5; }));
-        if (opsEsp.notice) g3.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);font-size:11px;", opsEsp.notice));
-        g3.appendChild(choose(i18nT('tlSettings.max_videos'), [[10, "10"], [30, "30"], [60, "60"], [100, "100"], [200, "200"]], b.timelapses_max || 30, function (v) { b.timelapses_max = Math.round(v) || 30; }));
-        g3.appendChild(choose(i18nT('tlSettings.max_captures'), [[100, "100"], [300, "300"], [1000, "1000"], [3000, "3000"]], b.captures_max || 300, function (v) { b.captures_max = Math.round(v) || 300; }));
-        g3.appendChild(choose(i18nT('tlSettings.notify_and_wait_before_deleting'), [[1, "1 h"], [6, "6 h"], [24, i18nT('tlSettings.1_day')], [72, i18nT('tlSettings.3_days')], [168, i18nT('tlSettings.7_days')]], b.delete_wait_h || 24, function (v) { b.delete_wait_h = Math.round(v) || 24; }));
-        g3.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('tlSettings.when_a_limit_is_exceeded_the')));
+        var fSpace = field(i18nT('tlSettings.space_for_the_videos'), cameraStoreSelect(opsEsp.list, b.timelapses_gb || 5, function (v) { b.timelapses_gb = v || 5; }, rr));
+        if (opsEsp.notice) fSpace.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);font-size:11px;", opsEsp.notice));
+        field(i18nT('tlSettings.max_videos'), cameraStoreSelect([[10, "10"], [30, "30"], [60, "60"], [100, "100"], [200, "200"]], b.timelapses_max || 30, function (v) { b.timelapses_max = Math.round(v) || 30; }, rr));
+        field(i18nT('tlSettings.max_captures'), cameraStoreSelect([[100, "100"], [300, "300"], [1000, "1000"], [3000, "3000"]], b.captures_max || 300, function (v) { b.captures_max = Math.round(v) || 300; }, rr));
+        field(i18nT('tlSettings.notify_and_wait_before_deleting'), cameraStoreSelect([[1, "1 h"], [6, "6 h"], [24, i18nT('tlSettings.1_day')], [72, i18nT('tlSettings.3_days')], [168, i18nT('tlSettings.7_days')]], b.delete_wait_h || 24, function (v) { b.delete_wait_h = Math.round(v) || 24; }, rr));
+        field(i18nT('tlSettings.notify_if_a_camera_stops_responding'), cameraStoreSelect([[1, i18nT('page.notify_yes')], [0, i18nT('page.notify_no')]], b.notice_drop ? 1 : 0, function (v) { b.notice_drop = !!v; }, rr));
+        card.appendChild(grid);
+        card.appendChild(cameraEl("div", null, i18nT('tlSettings.when_a_limit_is_exceeded_the'))).className = "ctl-muted";
+      }
 
-        // 4. Avisos al celular
-        var g4 = group("4", i18nT('tlSettings.phone_notifications'), null);
-        g4.appendChild(casilla(i18nT('tlSettings.notify_if_a_camera_stops_responding'), b.notice_drop, function (v) { b.notice_drop = v; }));
-
-        // Save (applies to all the screens)
+      // Undo changes and Save settings (applies to all the screens), at the end of the card.
+      function cameraStoreActions(card, b, cfg, o) {
         var changed = cfg && JSON.stringify(cfg) !== JSON.stringify(b);
-        var fg = cameraEl("div", "display:flex;gap:8px;align-items:center;flex-wrap:wrap;");
-        var bg = cameraBtn(i18nT('tlSettings.save_settings'), changed ? "background:#1976d2;color:#fff;" : "", function () { o.save(b); });
-        bg.disabled = !changed;
-        fg.appendChild(bg);
-        if (changed) {
-          fg.appendChild(cameraBtn(i18nT('tlSettings.discard_changes'), "", function () { o.undo(); }));
-          fg.appendChild(cameraEl("span", "color:var(--c-amber,#ffe082);font-size:12px;", i18nT('tlSettings.there_are_unsaved_changes')));
-        } else fg.appendChild(cameraEl("span", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('tlSettings.saved_on_the_system_for_every')));
-        root.appendChild(fg);
-        return root;
+        var fg = cameraEl("div", "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;");
+        var undo = cameraBtn(i18nT('tlSettings.discard_changes'), "", function () { o.undo(); });
+        undo.disabled = !changed;
+        var save = cameraBtn(i18nT('tlSettings.save_settings'), changed ? "background:#1976d2;color:#fff;" : "", function () { o.save(b); });
+        save.disabled = !changed;
+        fg.appendChild(undo);
+        fg.appendChild(save);
+        fg.appendChild(cameraEl("span", changed ? "color:var(--c-amber,#ffe082);font-size:12px;" : "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT(changed ? 'tlSettings.there_are_unsaved_changes' : 'tlSettings.saved_on_the_system_for_every')));
+        card.appendChild(fg);
       }
 
       // Space options for videos from what the Pi has: 10, 25,

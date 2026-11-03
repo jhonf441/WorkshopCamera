@@ -1,16 +1,23 @@
-      // ---- Card "Camera settings" of the tab Image (informe-07: it was the sheet of the viewer's gear; informe-06 B-P6: the service keeps the settings) ----
+      // ---- Profiles and "Fine tuning" of the tab Image (informe-07: it was the card "Camera settings", the sheet of the viewer's gear; informe-06 B-P6: the service keeps the settings) ----
       //
       // Profiles and fine tuning of the ESP32-CAM. What is chosen is saved by the service for every screen and applied again by it when the camera
-      // restarts (15-settings.js: camera.image.get / camera.image.set), so this card only asks and draws what the service answers. The card draws ITSELF
+      // restarts (15-settings.js: camera.image.get / camera.image.set), so this only asks and draws what the service answers. It draws ITSELF
       // again: it never redraws the page, so the preview and the focus assistant next to it keep running.
-      // I = { cam (the id of the camera), data (the answer of camera.image.get, null while it is read), error, msg, busy, holder }
+      // The profiles are chips in the right column (`side`, next to the picture); the rest is the subsection "Fine tuning" of the card.
+      // I = { cam (the id of the camera), data (the answer of camera.image.get, null while it is read), error, msg, busy, holder (the subsection), profs (the chips) }
 
-      function cameraImageSettings(grid, cam) {
-        var card = studioCard(grid, "mdi-tune-variant", i18nT('common.camera_settings'), i18nT('settings.what_you_change_here_is_saved'));
+      function cameraImageSettings(card, cam, side) {
+        var profs = cameraEl("div", "display:flex;flex-direction:column;gap:8px;");
+        profs.appendChild(cameraEl("div", "", i18nT('common.reading'))).className = "ctl-muted";
+        (side || card).appendChild(profs);
+        var sub = cameraEl("div", "");
+        sub.className = "wf-sub";
+        sub.appendChild(cameraEl("div", "", i18nT('settings.fine_tuning'))).className = "wf-subt";
+        sub.appendChild(cameraEl("div", null, i18nT('settings.what_you_change_here_is_saved'))).className = "ctl-muted";
         var holder = cameraEl("div", "display:flex;flex-direction:column;gap:8px;");
-        holder.appendChild(cameraEl("div", "", i18nT('common.reading'))).className = "ctl-muted";
-        card.appendChild(holder);
-        var I = { cam: cam.id, data: null, error: "", msg: "", busy: false, holder: holder };
+        sub.appendChild(holder);
+        card.appendChild(sub);
+        var I = { cam: cam.id, data: null, error: "", msg: "", busy: false, holder: holder, profs: profs };
         cameraImageLoad(I);
         return I;
       }
@@ -33,6 +40,7 @@
 
       function cameraImagePaint(I) {
         I.holder.textContent = "";
+        I.profs.textContent = "";
         if (!I.data) {
           I.holder.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);", I.error || i18nT('common.no_response')));
           return;
@@ -72,23 +80,23 @@
         return cameraEl("span", "font-size:10px;background:" + color + ";color:#000;border-radius:8px;padding:1px 6px;font-weight:500;", text);
       }
 
-      // The profiles of the service, one tap applies and saves it; "suggested now" follows what the machine is doing; the switch below lets the service change it by itself.
+      // The profiles of the service as compact chips, the active one marked and only ITS description under them; one tap applies and saves it.
+      // "suggested now" follows what the machine is doing; the switch below lets the service change it by itself.
       function cameraImageProfiles(I) {
-        var d = I.data;
-        I.holder.appendChild(cameraEl("div", "font-weight:600;margin-top:4px;", i18nT('settings.profiles')));
+        var d = I.data, box = I.profs;
+        box.appendChild(cameraEl("div", "font-size:12px;opacity:.7;", i18nT('settings.profiles')));
+        var chips = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
+        var activeId = !Object.keys(d.settings).length ? d.profile : null;
         d.profiles.forEach(function (p) {
-          var info = cameraProfileInfo(p.id);
-          var active = d.profile === p.id && !Object.keys(d.settings).length;
-          var edge = active ? "var(--wf-accent,#1976d2)" : "var(--c-edge,rgba(128,128,128,0.3))";
-          var box = cameraEl("div", "border-radius:8px;padding:8px 10px;cursor:pointer;border:1px solid " + edge + ";");
-          var name = cameraEl("div", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:500;", info[0]);
-          if (p.id === d.suggested) name.appendChild(cameraImageChip(i18nT('settings.suggested_now'), "#66bb6a"));
-          if (active) name.appendChild(cameraImageChip(i18nT('settings.in_use'), "#42a5f5"));
-          box.appendChild(name);
-          box.appendChild(cameraEl("div", "", info[1])).className = "ctl-muted";
-          box.addEventListener("click", function () { cameraImageApply(I, { profile: p.id }); });
-          I.holder.appendChild(box);
+          var chip = cameraBtn(cameraProfileInfo(p.id)[0], activeId === p.id ? "border:1px solid #1976d2;" : "", function () { cameraImageApply(I, { profile: p.id }); });
+          chip.className += " ctl-profile-chip";
+          chip.setAttribute("aria-pressed", activeId === p.id ? "true" : "false");
+          if (p.id === d.suggested) chip.appendChild(cameraImageChip(i18nT('settings.suggested_now'), "#66bb6a"));
+          if (activeId === p.id) chip.appendChild(cameraImageChip(i18nT('settings.in_use'), "#42a5f5"));
+          chips.appendChild(chip);
         });
+        box.appendChild(chips);
+        if (activeId) box.appendChild(cameraEl("div", null, cameraProfileInfo(activeId)[1])).className = "ctl-muted";
         var label = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;cursor:pointer;");
         var cb = cameraEl("input", "width:18px;height:18px;flex:none;");
         cb.type = "checkbox";
@@ -96,13 +104,12 @@
         cb.addEventListener("change", function () { cameraImageApply(I, { auto: cb.checked }); });
         label.appendChild(cb);
         label.appendChild(cameraEl("span", null, i18nT('settings.switch_automatically_to_the_suggested_one')));
-        I.holder.appendChild(label);
+        box.appendChild(label);
       }
 
       // The fine tuning: the resolution, the sliders and the switches of the camera (what the camera answered is what they show).
       function cameraImageFine(I) {
         var h = I.holder;
-        h.appendChild(cameraEl("div", "font-weight:600;margin-top:8px;", i18nT('settings.fine_tuning')));
         h.appendChild(studioRow(i18nT('settings.resolution'), cameraImageResolution(I)));
         h.appendChild(studioRow(i18nT('settings.quality_left_better'), cameraImageSlider(I, "quality", 8, 40)));
         h.appendChild(studioRow(i18nT('settings.brightness'), cameraImageSlider(I, "brightness", -2, 2)));

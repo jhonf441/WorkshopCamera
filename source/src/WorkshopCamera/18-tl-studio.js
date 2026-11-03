@@ -51,6 +51,18 @@
         return c;
       }
 
+      // A part of the ONE card of the Studio: a subsection (wf-sub) with its title and one line of help, no card of its own and no icon.
+      // The first one of a column starts flush with the top.
+      function studioSection(parent, icon, title, sub) {
+        var first = !(parent.children && parent.children.length);
+        var c = cameraEl("div", first ? "margin-top:0;padding-top:0;border-top:0;" : "");
+        c.className = "wf-sub";
+        c.appendChild(cameraEl("div", null, title)).className = "wf-subt";
+        if (sub) c.appendChild(cameraEl("div", null, sub)).className = "ctl-muted";
+        parent.appendChild(c);
+        return c;
+      }
+
       function studioRow(label, control) {
         var r = cameraEl("div", "");
         r.className = "cst-row";
@@ -142,7 +154,7 @@
       }
 
       function studioPreviewCard(parent, S) {
-        var c = studioCard(parent, "mdi-image-filter-center-focus-strong-outline", i18nT("studio.preview"), i18nT("studio.preview_hint"));
+        var c = studioSection(parent, "mdi-image-filter-center-focus-strong-outline", i18nT("studio.preview"), i18nT("studio.preview_hint"));
         var cams = (S.est && S.est.cameras) || [];
         if (!S.cam || !cams.some(function (x) { return x.id === S.cam; })) S.cam = (cams[0] && cams[0].id) || "main";
         if (cams.length > 1) {
@@ -183,7 +195,7 @@
       }
 
       function studioPresetsCard(parent, S) {
-        var c = studioCard(parent, "mdi-bookmark-multiple-outline", i18nT("studio.presets"), i18nT("studio.presets_hint"));
+        var c = studioSection(parent, "mdi-bookmark-multiple-outline", i18nT("studio.presets"), i18nT("studio.presets_hint"));
         var chips = cameraEl("div", "");
         chips.className = "cst-chips";
         function apply(p) {

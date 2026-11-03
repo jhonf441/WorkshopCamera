@@ -11,24 +11,29 @@
         studioCss(); // the rows, the sliders and the picture frame of the studio (18-tl-studio.js)
         var cam = cameraList.filter(function (c) { return c.id === S.cam; })[0] || cameraChosen();
         S.cam = cam.id;
-        if (cameraList.length > 1) page.appendChild(cameraImageChips(S));
-        var grid = cameraEl("div", "");
-        grid.className = "ctl-grid";
-        S.root = grid;
-        page.appendChild(grid);
+        // ONE card (mockup 2026-11-01): the cameras, the picture with the profiles and the assistant, then Orientation and Fine tuning as subsections
+        var card = studioCard(page, "mdi-camera-iris", i18nT('image.nav'), i18nT('image.lead'));
+        S.root = card;
+        if (cameraList.length > 1) card.appendChild(cameraImageChips(S));
         if (!S.urls || S.urls.id !== cam.id) {
-          grid.appendChild(cameraEl("div", "", i18nT('common.reading'))).className = "ctl-muted";
+          card.appendChild(cameraEl("div", "", i18nT('common.reading'))).className = "ctl-muted";
           cameraUrls(cam).then(function (u) {
             S.urls = { id: cam.id, u: u };
             S.ctx.rerender();
           });
           return;
         }
-        var u = S.urls.u;
-        cameraFocusCard(grid, cam, u);
-        cameraImageOrientation(grid, cam);
-        if (cam.esp32) cameraImageSettings(grid, cam);
-        else studioCard(grid, "mdi-tune-variant", i18nT('common.camera_settings'), i18nT('image.not_esp32'));
+        var two = cameraEl("div", "");
+        two.className = "ctl-live-two"; // the picture on the left, the profiles and the assistant on the right; one column when it is narrow
+        var left = cameraEl("div", "min-width:0;");
+        var right = cameraEl("div", "display:flex;flex-direction:column;gap:10px;min-width:0;");
+        two.appendChild(left);
+        two.appendChild(right);
+        card.appendChild(two);
+        cameraFocusCard(left, cam, S.urls.u, right, { go: ctx.go }); // 11-focus.js: the picture with its state and help, and the assistant when the view has it
+        if (!cam.esp32) right.appendChild(cameraEl("div", null, i18nT('image.not_esp32'))).className = "ctl-muted";
+        cameraImageOrientation(card, cam);
+        if (cam.esp32) cameraImageSettings(card, cam, right); // the profiles go to the right column, the rest is the subsection Fine tuning
       }
 
       // One chip per camera: the tab shows one camera at a time.
@@ -48,11 +53,15 @@
         return chips;
       }
 
-      // The orientation card: it draws itself again (the preview next to it is not redrawn).
-      function cameraImageOrientation(grid, cam) {
-        var card = studioCard(grid, "mdi-screen-rotation", i18nT('orientation.orientation'), cam.name + " · " + i18nT('orientation.this_screen_only'));
+      // The subsection "Orientation": it draws itself again (the preview above it is not redrawn).
+      function cameraImageOrientation(card, cam) {
+        var sub = cameraEl("div", "");
+        sub.className = "wf-sub";
+        sub.appendChild(cameraEl("div", "", i18nT('orientation.orientation'))).className = "wf-subt";
+        sub.appendChild(cameraEl("div", null, cam.name + " · " + i18nT('orientation.this_screen_only'))).className = "ctl-muted";
         var holder = cameraEl("div", "");
-        card.appendChild(holder);
+        sub.appendChild(holder);
+        card.appendChild(sub);
         function paint() {
           holder.textContent = "";
           holder.appendChild(cameraOrientControls(cam, paint));

@@ -136,7 +136,7 @@
         });
         b.addEventListener("pointerup", function (ev) {
           ev.stopPropagation();
-          cameraOpenPage("record"); // 18-page-tabs.js
+          cameraOpenPage("live"); // 18-page-tabs.js
           if (workshopIsNarrow()) cameraCollapse();
         });
         return b;
@@ -241,17 +241,80 @@
         );
       }
 
-      // Pill that says whether what is on screen is live video or a photo that refreshes: returns set(live), live = true | false.
+      // Pill over a picture that says what is on screen: returns set(live, h). live = the mode chosen (live video or a photo that refreshes);
+      // h = the judgement of the picture (14-health.js, {state, since_s}; null = not judged yet). The mode alone never says "LIVE": the pill says
+      // LIVE or PHOTO in green only while frames come and are not black; otherwise it carries the words and the colour of the state (amber for a
+      // picture that stopped or is black, red for a camera that does not respond), the same as every other place (owner report 2026-11-03).
       // `host` is the element it sits on (absolute); `css` positions it.
       function cameraBadge(host, css) {
         var b = document.createElement("div");
         b.setAttribute("data-workshop-i18n", "");
         b.style.cssText = "position:absolute;padding:1px 7px;border-radius:9px;font:bold 10px Roboto,sans-serif;color:#fff;pointer-events:none;z-index:2;" + css;
         host.appendChild(b);
-        return function (live) {
-          b.textContent = live ? "● " + i18nT('camera.badge_live') : i18nT('camera.badge_photo', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 });
-          b.style.background = live ? "#d32f2f" : "rgba(55,71,79,0.9)";
+        return function (live, h) {
+          var state = h ? h.state : "waiting";
+          b.textContent = !h || state === "fresh" ? (live ? "● " + i18nT('camera.badge_live') : i18nT('camera.badge_photo', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 })) : cameraHealthWord(h, i18nT);
+          b.style.background = cameraHealthFill(state);
+          b.setAttribute("data-state", state);
         };
+      }
+
+      // The round button of the top left corner, before it says anything: the flash of the viewer (its state is painted by cameraFlashPaint).
+      function cameraFlashButton(panel) {
+        var flashBtn = document.createElement("button");
+        flashBtn.type = "button";
+        flashBtn.title = i18nT('camera.camera_flash');
+        // SVG instead of emoji -- the unicode bolt has no glyph in the kiosk font (it looked like a "broken image" icon, confirmed live 2026-10-07).
+        flashBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" width="16" height="16" style="pointer-events:none;vertical-align:middle" fill="#000">' +
+          '<path d="M7 2v11h3v9l7-12h-4l4-8z"/>' +
+          '<line x1="3" y1="21" x2="21" y2="3" stroke="#ef5350" stroke-width="2.5"/>' +
+          "</svg>";
+        flashBtn.style.cssText =
+          "position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#37474f;color:#000;font-size:14px;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;display:none;";
+        cameraFlashPaint(flashBtn, false);
+        panel.appendChild(flashBtn);
+        return flashBtn;
+      }
+
+      // The mode button (next to the flash): photo (light, default) or live video. Returns { btn, paint(liveMode, shown) }: "play" = it is in photo,
+      // tapping switches to video; "stop" = it is in video, tapping goes back to photo.
+      var CAMERA_MODE_ICON_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><path d="M8 5v14l11-7z"/></svg>';
+      var CAMERA_MODE_ICON_STOP = '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><rect x="6" y="6" width="12" height="12"/></svg>';
+      function cameraModeButton(panel) {
+        var modeBtn = document.createElement("button");
+        modeBtn.type = "button";
+        modeBtn.style.cssText =
+          "position:absolute;left:34px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#e0e0e0;color:#000;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;";
+        panel.appendChild(modeBtn);
+        return {
+          btn: modeBtn,
+          paint: function (liveMode, shown) {
+            modeBtn.style.display = shown ? "" : "none";
+            modeBtn.title = i18nT(liveMode ? 'camera.back_to_photo_mode' : 'camera.switch_to_live_video');
+            modeBtn.innerHTML = liveMode ? CAMERA_MODE_ICON_STOP : CAMERA_MODE_ICON_PLAY;
+          },
+        };
+      }
+
+      // "Help to bring it back", under the Retry button: it opens the Live section of the page, where the checklist is (14-health-recover.js). Shown
+      // only while the picture is not alive and the view has the page (09-camera-roles.js cameraPageLinkShown).
+      function cameraHelpButton(panel, onTap) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.title = i18nT('camera.recover_help');
+        b.textContent = i18nT('camera.recover_help');
+        b.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,28px);padding:6px 12px;border-radius:14px;border:1px solid rgba(255,255,255,0.6);background:rgba(0,0,0,0.6);color:#fff;font:12px Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;cursor:pointer;touch-action:none;z-index:1;display:none;";
+        panel.appendChild(b);
+        b.addEventListener("pointerdown", function (ev) {
+          ev.stopPropagation();
+          ev.preventDefault(); // see the note in viewBtn pointerdown
+        });
+        b.addEventListener("pointerup", function (ev) {
+          ev.stopPropagation();
+          onTap();
+        });
+        return b;
       }
 
       // The badge of the floating viewer (below the buttons of the top left corner)
@@ -295,10 +358,12 @@
           cameraTlStudio.pending = null;
         }
         if (typeof cameraFocusCurrent !== "undefined" && cameraFocusCurrent && (!root || (root.contains && root.contains(cameraFocusCurrent.img)))) cameraFocusRelease();
+        if (typeof cameraHealthRelease === "function") cameraHealthRelease(root || null); // 14-health.js: the judgement of the pictures of the view
         workshopCoverRelease(root || null); // 26-camera-cover.js
       }
 
-      // "Live" card of the Record tab: the latest saved photo of each camera being recorded (t = the timelapse state of the relay).
+      // "Live" card of the Record tab: the latest saved photo of each camera being recorded (t = the timelapse state of the relay). A camera with no
+      // saved photo yet (the relay answers 404) says so: that is not a camera that does not respond.
       function cameraLiveGrid(t) {
         var grid = cameraEl("div", "");
         grid.className = "ctl-live";
@@ -308,7 +373,7 @@
           im.src = cameraRelayLastUrl(cid, t.frames);
           im.alt = cid;
           fig.appendChild(im);
-          cameraOwnError(im);
+          cameraOwnError(im, function () { return i18nT('live.no_photo_yet'); });
           fig.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;margin-top:2px;", cameraTlNames([cid])[0]));
           grid.appendChild(fig);
         });

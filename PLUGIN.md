@@ -99,7 +99,7 @@ Picture 2: the sheet "Cameras" opened with the gear: list, orientation and butto
 - What: the relay is the process of the system (port 8090) that shares the camera video with every screen and makes the captures and timelapses. The card "Camera relay (process on the system)" says whether it runs ("Running, 2 watching.", "STOPPED: nobody sees the camera.", "No camera address yet: add a camera first.", or "State unknown: the service did not answer.") and offers "Stop relay" and "Start relay". Only the one that makes sense now is on; the other is grey.
 - Where: sheet "Cameras", under the buttons "+ Add camera", "Search cameras", "Captures and timelapse" and "See all" (not in picture 2).
 - How: 1. Open the sheet with the gear. 2. To stop it press "Stop relay", then press again within 4 s ("Tap again: cut it for EVERYONE"). 3. To start it press "Start relay". 4. The line above is read again a moment later.
-- Watch out: stopping it cuts the camera for EVERYONE watching it now, on every screen, and no capture or timelapse can be made until it starts again. To stop watching only on your screen, close the viewer. Technician role. The same sheet shows, when you edit the Main camera with an empty address, which camera the relay reads and lets you change its address.
+- Watch out: the same card can be put in the control bar (optional, off by default: gear of the bar > the switch "Camera relay"; technician role; it reads the state every 15 s only while the bar is open and the card is on). Stopping it cuts the camera for EVERYONE watching it now, on every screen, and no capture or timelapse can be made until it starts again. To stop watching only on your screen, close the viewer. Technician role. The same sheet shows, when you edit the Main camera with an empty address, which camera the relay reads and lets you change its address.
 
 #### Orientation
 - What: Auto (uses the Vision calibration, only for the calibrated camera), 0, 90, 180, 270 degrees, Horizontal mirror and Mirror vertically; it applies to this screen only.
@@ -130,6 +130,9 @@ Picture 3: "Camera settings": the profiles and the automatic switch (red rectang
 - What: a fold with finer image values of the camera.
 - Where: bottom of the sheet (picture 3).
 - How: press it to unfold.
+
+### Page layout (since 2.12)
+The page `/Plugins/Timelapses` has a side bar with six sections in three groups, each one a SINGLE card whose parts are sub-sections. The older "Record / Studio / Videos / Captures / Settings" tabs below were folded into them (the sections below keep describing what each part does): Operate = **Live** (capture now, record a timelapse, light, quick image profiles, the 3 s preview photo, "Open the floating viewer") and **Library** (videos and captures); Video quality = **Studio**; Configure = **Cameras**, **Image** (preview, focus assistant, profile chips, orientation, fine tuning) and **Storage** (usage, limits, notices, and the system relay inside the same card). Choosing a section from far down the page scrolls to its start. Saved tab ids migrate (`record` to Live, `videos` and `captures` to Library, `settings` to Storage). The operator sees Live and Library; the technician sees all six. Screenshots of the new layout are pending (PENDING-CAPTURES.md).
 
 ### Page: Record
 

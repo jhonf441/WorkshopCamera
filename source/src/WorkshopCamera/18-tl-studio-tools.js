@@ -5,7 +5,7 @@
 
       function studioBurstCard(parent, S) {
         var keep = cameraTlStudio.keep;
-        var c = studioCard(parent, "mdi-camera-burst", i18nT("studio.burst"), i18nT("studio.burst_hint"));
+        var c = studioSection(parent, "mdi-camera-burst", i18nT("studio.burst"), i18nT("studio.burst_hint"));
         var box = { t: { count: keep.burstCount || 5, gap: keep.burstGap || 1 }, rerender: function () {
           keep.burstCount = box.t.count;
           keep.burstGap = box.t.gap;
@@ -28,7 +28,7 @@
       // The videos that kept their stills can be built again with the settings now on screen (the original stays).
       function studioRebuildCard(parent, S) {
         var keep = cameraTlStudio.keep;
-        var c = studioCard(parent, "mdi-movie-refresh-outline", i18nT("studio.rebuild"), i18nT("studio.rebuild_hint"));
+        var c = studioSection(parent, "mdi-movie-refresh-outline", i18nT("studio.rebuild"), i18nT("studio.rebuild_hint"));
         var body = cameraEl("div", "display:flex;flex-direction:column;gap:8px;");
         c.appendChild(body);
         cameraRelayList("video").then(function (all) {

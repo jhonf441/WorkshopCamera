@@ -178,6 +178,7 @@
         var snapshotUrl = url.replace(/\/stream$/, "/snapshot");
         var esEsp32 = true; // the main one (ESP32-camera through the relay) until another is chosen
         var cameraCurrent = null; // the camera of the list that is being seen (12-cameras.js)
+        var health = null; // the judgement of the picture on screen (14-health.js): null while the viewer is closed
 
         var panel = cameraPanelBox(savedSize); // 11-panel-parts.js
 
@@ -219,6 +220,25 @@
           }, delay);
         }
 
+        // The picture on screen is judged by 14-health.js (frames that come, a black frame, the relay's numbers): the badge, the Retry and the
+        // help follow that judgement, never the mode alone. A new mode or camera starts a new judgement; closing the viewer ends it.
+        function healthStart() {
+          healthStop();
+          var again = liveMode ? startLiveMode : startSnapshotMode; // Retry asks again in the mode on screen (never back to photo from live)
+          health = cameraHealthWatch(img, cameraCurrent || cameraChosen(), { video: liveMode, photo: snapshotUrl, relayPoll: liveMode, onChange: paintHealth, reload: again });
+        }
+        function healthStop() {
+          if (health) cameraHealthStop(health);
+          health = null;
+        }
+        function paintHealth() {
+          var h = health && health.h;
+          modeBadge(liveMode, h);
+          var alive = !h || h.state === "fresh" || h.state === "waiting";
+          helpBtn.style.display = !alive && cameraPageLinkShown(cameraCanDo("gallery"), cameraPageRegistered) ? "" : "none";
+          viewBtn.style.display = alive ? "none" : ""; // Retry whenever the picture is not alive, in either mode
+        }
+
         function startSnapshotMode() {
           // camera without a still image: video only
           if (!snapshotUrl) return startLiveMode();
@@ -229,6 +249,7 @@
           }
           stopSnapshotMode();
           viewBtn.style.display = "none";
+          healthStart();
           updateModeBtn();
           img.src = snapshotUrl + "?_=" + Date.now();
           scheduleSnapshotTick(CAMERA_SNAPSHOT_POLL_MS);
@@ -238,6 +259,7 @@
           liveMode = true; cameraLiveId = (cameraCurrent || cameraChosen()).id;
           stopSnapshotMode();
           viewBtn.style.display = "none";
+          healthStart();
           updateModeBtn();
           // If the stream is already busy (another tab watching), the ESP32
           // sometimes does not even fire the <img>'s "error" event --
@@ -261,6 +283,7 @@
         cameraStopStreamFn = function () {
           liveMode = false; cameraLiveId = null;
           stopSnapshotMode();
+          healthStop();
           if (connectTimeoutId) {
             clearTimeout(connectTimeoutId);
             connectTimeoutId = null;
@@ -269,6 +292,7 @@
           img.style.setProperty("display", "none", "important");
           flashBtn.style.display = "none";
           viewBtn.style.display = "none";
+          helpBtn.style.display = "none";
         };
         // abre en foto (liviano) o en video segun la camara (12-cameras.js "abrir")
         cameraStartModeFn = function () {
@@ -288,7 +312,13 @@
         });
         viewBtn.addEventListener("pointerup", function (ev) {
           ev.stopPropagation();
-          startLiveMode();
+          if (health) cameraHealthRetry(health); // a fresh request in the mode on screen, judged as a first one (14-health.js)
+          else startLiveMode();
+        });
+        // the way to the checklist of the page (Live section) while the picture is not alive; on a narrow screen the viewer closes behind it
+        var helpBtn = cameraHelpButton(panel, function () {
+          cameraOpenPage("live");
+          if (workshopIsNarrow()) cameraCollapse();
         });
 
         img.addEventListener("load", function () {
@@ -312,38 +342,7 @@
           /* odd URL -- the flash button simply will not be able to call the endpoint */
         }
 
-        var flashBtn = document.createElement("button");
-        flashBtn.type = "button";
-        flashBtn.title = i18nT('camera.camera_flash');
-        // SVG instead of emoji -- the unicode bolt has no glyph in the
-        // kiosk font (it looked like a "broken image" icon,
-        // confirmed live 2026-10-07).
-        flashBtn.innerHTML =
-          '<svg viewBox="0 0 24 24" width="16" height="16" style="pointer-events:none;vertical-align:middle" fill="#000">' +
-          '<path d="M7 2v11h3v9l7-12h-4l4-8z"/>' +
-          '<line x1="3" y1="21" x2="21" y2="3" stroke="#ef5350" stroke-width="2.5"/>' +
-          "</svg>";
-        flashBtn.style.cssText = [
-          "position:absolute",
-          "left:4px",
-          "top:4px",
-          "width:26px",
-          "height:26px",
-          "border-radius:50%",
-          "border:none",
-          "background:#37474f",
-          "color:#000",
-          "font-size:14px",
-          "line-height:26px",
-          "text-align:center",
-          "padding:0",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-          "display:none",
-        ].join(";");
-        cameraFlashPaint(flashBtn, false);
-        panel.appendChild(flashBtn);
+        var flashBtn = cameraFlashButton(panel); // 11-panel-parts.js
 
         flashBtn.addEventListener("pointerdown", function (ev) {
           ev.stopPropagation();
@@ -380,42 +379,14 @@
           cameraFlashPaint(flashBtn, flashOn);
         }
 
-        // Mode button (next to the flash) -- alternates between photo
-        // (light, default) and live video. "play" icon = it is in
-        // photo, tapping switches to video; "stop" icon = it is in video, tapping
-        // goes back to photo.
-        var MODE_ICON_PLAY =
-          '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><path d="M8 5v14l11-7z"/></svg>';
-        var MODE_ICON_STOP =
-          '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><rect x="6" y="6" width="12" height="12"/></svg>';
-
-        var modeBtn = document.createElement("button");
-        modeBtn.type = "button";
-        modeBtn.style.cssText = [
-          "position:absolute",
-          "left:34px",
-          "top:4px",
-          "width:26px",
-          "height:26px",
-          "border-radius:50%",
-          "border:none",
-          "background:#e0e0e0",
-          "color:#000",
-          "line-height:26px",
-          "text-align:center",
-          "padding:0",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-        ].join(";");
-        panel.appendChild(modeBtn);
+        // Mode button (next to the flash) -- alternates between photo (light, default) and live video (11-panel-parts.js).
+        var mode = cameraModeButton(panel);
+        var modeBtn = mode.btn;
 
         var modeBadge = cameraModeBadge(panel); // 11-panel-parts.js
         function updateModeBtn() {
-          modeBtn.style.display = snapshotUrl ? "" : "none";
-          modeBtn.title = i18nT(liveMode ? 'camera.back_to_photo_mode' : 'camera.switch_to_live_video');
-          modeBtn.innerHTML = liveMode ? MODE_ICON_STOP : MODE_ICON_PLAY;
-          modeBadge(liveMode);
+          mode.paint(liveMode, !!snapshotUrl);
+          paintHealth(); // the badge says what the judgement says, in the mode on screen
         }
         updateModeBtn();
 

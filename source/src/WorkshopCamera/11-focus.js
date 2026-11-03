@@ -56,6 +56,7 @@
         clearTimeout(F.photoTimer);
         F.timer = null;
         F.photoTimer = null;
+        if (F.health) cameraHealthStop(F.health); // 14-health.js: the judgement of this picture ends with it
       }
 
       function cameraFocusRelease() {
@@ -134,6 +135,7 @@
         ui.frame.style.display = "";
         ui.meter.style.display = "flex";
         ui.button.classList.add("ctl-on");
+        if (F.health) cameraHealthMode(F.health, true); // the picture is the live video while it measures
         F.img.src = F.u.video;
         F.timer = setInterval(function () { cameraFocusTick(F); }, 300);
       }
@@ -149,6 +151,7 @@
         ui.button.classList.remove("ctl-on");
         ui.note.textContent = message || "";
         F.img.removeAttribute("src");
+        if (F.health) cameraHealthMode(F.health, false);
         cameraFocusPhoto(F);
       }
 
@@ -166,30 +169,50 @@
         return { meter: meter, text: text, bar: bar, hint: hint, reset: reset };
       }
 
-      // The card "Preview and focus" of the tab Image: the picture of the camera (a photo every 3 s; the live video while the assistant is on) and,
-      // for the technician (feature "focus") with a camera that has a still image, the sharpness meter. cam = the camera of the list, u = cameraUrls(cam).
-      function cameraFocusCard(grid, cam, u) {
+      // The picture of a camera: a photo that refreshes every 3 s (the live video only while the assistant measures; a camera with no still image shows
+      // its video). It is the preview of the tabs Image and Live: ONE component, and it never opens a second stream of its own.
+      // parent = where the picture goes, cam = the camera of the list, u = cameraUrls(cam), opts = { go(tab) (the page: the help may open its
+      // Cameras tab) }. Under the picture: its judgement (14-health.js, the same words as the viewer's badge and the in-place note) and the help to
+      // bring the camera back when it is not alive (14-health-recover.js). Returns the state F (11-focus.js) that keeps it alive.
+      function cameraFocusPreview(parent, cam, u, opts) {
         cameraFocusRelease();
-        var card = studioCard(grid, "mdi-image-filter-center-focus", i18nT('image.preview'), i18nT('image.preview_hint', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 }));
         var box = cameraEl("div", "position:relative;");
         var img = cameraEl("img", "");
-        img.className = "cst-pre";
+        img.className = "cst-pre"; // the frame of the picture (studioCss, 18-tl-studio.js)
         img.alt = cam.name;
         box.appendChild(img);
-        cameraOwnError(img); // the note goes next to the picture, inside the box
+        var F = cameraFocusState(img, u, null);
+        cameraOwnError(img, function () { return cameraHealthWord(F.health && F.health.h, i18nT) || workshopCoverReason(); }); // the note next to the picture says what the judgement says
         var frame = cameraEl("div", "position:absolute;left:30%;top:30%;width:40%;height:40%;border:2px dashed #fff59d;box-sizing:border-box;pointer-events:none;display:none;");
         box.appendChild(frame);
-        card.appendChild(box);
-        var F = cameraFocusState(img, u, null);
+        parent.appendChild(box);
+        parent.appendChild(cameraEl("div", null, i18nT('image.preview_hint', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 }))).className = "ctl-muted";
+        F.frame = frame;
         cameraFocusCurrent = F;
-        if (cameraCanDo("focus") && u.photo) {
-          var m = cameraFocusMeter(F);
-          var note = cameraEl("div", "");
-          note.className = "ctl-muted";
-          var button = cameraBtn(i18nT('image.focus_assistant'), "align-self:flex-start;", function () { if (F.on) cameraFocusOff(F); else cameraFocusOn(F); });
-          F.ui = { meter: m.meter, frame: frame, text: m.text, bar: m.bar, hint: m.hint, note: note, button: button };
-          [button, note, m.meter].forEach(function (n) { card.appendChild(n); });
-        }
-        cameraFocusPhoto(F);
+        F.health = cameraHealthWatch(img, cam, { video: !u.photo, photo: u.photo, onChange: function () { if (F.healthUi) F.healthUi.paint(); }, reload: function () { cameraFocusPhoto(F); } });
+        F.healthUi = cameraHealthPanel(parent, F.health, { go: opts && opts.go });
+        // A page that draws again (a profile was applied) builds the preview before its parent is in the document: the picture is asked for once
+        // it is there. Asking at once saw a picture "not connected", ended the preview and left the image without an address (broken icon).
+        if (img.isConnected === false) F.photoTimer = setTimeout(function () { cameraFocusPhoto(F); }, 0);
+        else cameraFocusPhoto(F);
+        return F;
+      }
+
+      // The focus assistant of a preview: for the technician (feature "focus") with a camera that has a still image, the button, its note and the
+      // sharpness meter go into `side`.
+      function cameraFocusAssistant(F, side) {
+        if (!cameraCanDo("focus") || !F.u.photo) return;
+        var m = cameraFocusMeter(F);
+        var note = cameraEl("div", "");
+        note.className = "ctl-muted";
+        var button = cameraBtn(i18nT('image.focus_assistant'), "align-self:flex-start;", function () { if (F.on) cameraFocusOff(F); else cameraFocusOn(F); });
+        F.ui = { meter: m.meter, frame: F.frame, text: m.text, bar: m.bar, hint: m.hint, note: note, button: button };
+        [button, note, m.meter].forEach(function (n) { side.appendChild(n); });
+      }
+
+      // The preview of the tab Image with its assistant: the picture in `parent`, the assistant in `side` (default: after the picture).
+      function cameraFocusCard(parent, cam, u, side, opts) {
+        var F = cameraFocusPreview(parent, cam, u, opts);
+        cameraFocusAssistant(F, side || parent);
         return F;
       }

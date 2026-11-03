@@ -103,11 +103,36 @@
         cameraRelayAct(rs, "stop");
       }
 
+      // "Start relay": a pending "Stop relay" is let go and the relay starts (it harms nobody, so one tap).
+      function cameraRelayStartTap(rs) {
+        if (rs.armed) clearTimeout(rs.armed);
+        rs.armed = null;
+        cameraRelayAct(rs, "start");
+      }
+
+      // "Restart relay" (the help of a camera that does not respond, 14-health-recover.js): the same two taps as Stop, since it cuts the video for
+      // everyone; then Stop and, two seconds later (the loop of the service takes a second to close the port), Start.
+      function cameraRelayRestartTap(rs) {
+        if (!rs.armed) {
+          rs.armed = setTimeout(function () {
+            rs.armed = null;
+            if (rs.alive()) rs.repaint();
+          }, 4000);
+          rs.repaint();
+          return;
+        }
+        clearTimeout(rs.armed);
+        rs.armed = null;
+        cameraRelayAct(rs, "stop").then(function () {
+          setTimeout(function () { cameraRelayAct(rs, "start"); }, 2000);
+        });
+      }
+
       // The card of the tab: state, Stop relay, Start relay, the last message and the help. el / btn are the page's own makers (cameraEl, cameraBtn).
       // Only the technician's view (feature "relay") gets it: stopping the relay cuts the camera for everyone.
-      function cameraRelayCard(rs, el, btn) {
+      function cameraRelayCard(rs, el, btn, asSub) {
         var box = el("div", "");
-        box.className = "ctl-card wf-card";
+        box.className = asSub ? "wf-sub" : "ctl-card wf-card"; // asSub: a subsection of the card of Storage and system
         if (!cameraCanDo("relay")) {
           box.style.display = "none";
           return box;
@@ -116,11 +141,18 @@
         var can = cameraRelayCan(state);
         var line = cameraRelayLine(state, rs.status, i18nT);
         var head = el("div", "");
-        head.className = "ctl-title";
-        head.appendChild(el("span", "")).className = "mdi mdi-server-network";
-        head.appendChild(el("span", null, i18nT('relay.title')));
+        if (asSub) {
+          head.className = "wf-subt";
+          head.textContent = i18nT('relay.title');
+        } else {
+          head.className = "ctl-title";
+          head.appendChild(el("span", "")).className = "mdi mdi-server-network";
+          head.appendChild(el("span", null, i18nT('relay.title')));
+        }
         box.appendChild(head);
-        box.appendChild(el("div", "font-weight:bold;min-height:16px;color:" + line[1] + ";", line[0]));
+        var st = el("div", asSub ? "min-height:16px;" : "font-weight:bold;min-height:16px;color:" + line[1] + ";", line[0]);
+        if (asSub) st.className = "wf-state " + (state === "running" ? "ok" : state === "stopped" ? "err" : state === "nocam" ? "warn" : "info"); // a dot and the word
+        box.appendChild(st);
         var tall = "min-height:" + (window.matchMedia && window.matchMedia("(pointer: coarse)").matches === true ? 44 : 32) + "px;"; // DESIGN.md: touch targets
         var row = el("div", "display:flex;gap:6px;flex-wrap:wrap;");
         // the red outline is the danger look; the amber one is the pending second tap of the double tap; a button that cannot be used is disabled
@@ -128,9 +160,7 @@
           cameraRelayStopTap(rs);
         });
         var start = btn(i18nT('relay.start'), "background:#1976d2;color:#fff;" + tall, function () {
-          if (rs.armed) clearTimeout(rs.armed);
-          rs.armed = null;
-          cameraRelayAct(rs, "start");
+          cameraRelayStartTap(rs);
         });
         [[stop, can.stop], [start, can.start]].forEach(function (x) {
           x[0].disabled = !x[1];

@@ -2,7 +2,7 @@
 
       function studioCaptureCard(parent, S) {
         var t = S.t;
-        var c = studioCard(parent, "mdi-timer-outline", i18nT("studio.capture"), i18nT("studio.capture_hint"));
+        var c = studioSection(parent, "mdi-timer-outline", i18nT("studio.capture"), i18nT("studio.capture_hint"));
         c.appendChild(studioRow(i18nT("studio.interval"), studioNumber(S, "each_s", 2, 600, 1, "s")));
         var ramp = Number(t.each_end_s) >= 2;
         c.appendChild(studioCheck({ t: { ramp: ramp }, rerender: function () {
@@ -25,7 +25,7 @@
 
       function studioFramingCard(parent, S) {
         var t = S.t;
-        var c = studioCard(parent, "mdi-crop", i18nT("studio.framing"), i18nT("studio.framing_hint"));
+        var c = studioSection(parent, "mdi-crop", i18nT("studio.framing"), i18nT("studio.framing_hint"));
         c.appendChild(studioRow(i18nT("studio.aspect"), studioSelect(S, "aspect", STUDIO_ASPECTS.map(function (a) {
           return [a[0], a[1].indexOf("studio.") === 0 ? i18nT(a[1]) : a[1]];
         }))));
@@ -83,7 +83,7 @@
       }
 
       function studioColorCard(parent, S) {
-        var c = studioCard(parent, "mdi-palette-outline", i18nT("studio.color"), i18nT("studio.color_hint"));
+        var c = studioSection(parent, "mdi-palette-outline", i18nT("studio.color"), i18nT("studio.color_hint"));
         studioLutRow(c, S);
         var two = function (v) { return (v > 0 ? "+" : "") + v.toFixed(2); };
         c.appendChild(studioRow(i18nT("studio.brightness"), studioRange(S, "brightness", -0.3, 0.3, 0.01, two)));
@@ -104,7 +104,7 @@
 
       function studioDeliveryCard(parent, S) {
         var t = S.t;
-        var c = studioCard(parent, "mdi-movie-open-cog-outline", i18nT("studio.delivery"), i18nT("studio.delivery_hint"));
+        var c = studioSection(parent, "mdi-movie-open-cog-outline", i18nT("studio.delivery"), i18nT("studio.delivery_hint"));
         c.appendChild(studioRow(i18nT("studio.codec"), studioSelect(S, "codec", STUDIO_CODECS, false, (S.est && S.est.encoders) || null)));
         var q = [[1, i18nT("studio.q_draft")], [2, i18nT("studio.q_standard")], [3, i18nT("studio.q_high")], [4, i18nT("studio.q_master")]];
         c.appendChild(studioRow(i18nT("studio.quality"), studioSelect(S, "quality", q, true)));
@@ -121,7 +121,7 @@
       // How much material an event gives with the present settings (the interval ramp is averaged)
       function studioEstimate(parent, S) {
         var t = S.t;
-        var c = studioCard(parent, "mdi-calculator-variant-outline", i18nT("studio.estimate"), i18nT("studio.estimate_hint"));
+        var c = studioSection(parent, "mdi-calculator-variant-outline", i18nT("studio.estimate"), i18nT("studio.estimate_hint"));
         var hours = S.hours || 8;
         var box = cameraEl("div", "display:flex;gap:6px;align-items:center;");
         box.appendChild(cameraEl("span", "color:var(--c-sec);", i18nT("studio.event_of")));
@@ -156,7 +156,7 @@
       }
 
       function studioActions(parent, S) {
-        var c = studioCard(parent, "mdi-rocket-launch-outline", i18nT("studio.take"), i18nT("studio.take_hint"));
+        var c = studioSection(parent, "mdi-rocket-launch-outline", i18nT("studio.take"), i18nT("studio.take_hint"));
         var name = cameraEl("input", CAMERA_CSS_SEL + "width:100%;box-sizing:border-box;");
         name.placeholder = i18nT("timelapse.name_optional");
         name.maxLength = 60;
@@ -196,7 +196,7 @@
             cameraRelayTimelapse("begin", { name: name || null, cfg: JSON.stringify(studioTake(c.draft.timelapse)) })
               .then(function (d) {
                 c.notice(d.ok ? i18nT('studio.take_started') : i18nT('common.couldn_t_error', { error: d.error || "" }), !!d.ok);
-                if (d.ok) cameraStateRead().then(function () { c.go("record"); c.reload(); });
+                if (d.ok) cameraStateRead().then(function () { c.go("live"); c.reload(); });
               })
               .catch(function (e) { c.notice(i18nT('common.couldn_t_error', { error: String(e.message || e) }), false); });
           },
@@ -210,7 +210,10 @@
         var S = { draft: o.draft, cfg: o.cfg, est: o.est, t: o.draft.timelapse, rerender: o.rerender, save: o.save, undo: o.undo, notice: o.notice,
                   reload: o.reload, startTake: o.startTake, cam: cameraTlStudio.keep.cam, hours: cameraTlStudio.keep.hours, preview: function () {} };
         var root = cameraEl("div", "");
-        root.className = "cst-cols";
+        var card = studioCard(root, "mdi-movie-edit-outline", i18nT("studio.nav"), i18nT("studio.lead")); // ONE card: the parts are its subsections
+        var cols = cameraEl("div", "");
+        cols.className = "cst-cols";
+        card.appendChild(cols);
         var left = cameraEl("div", "display:flex;flex-direction:column;gap:12px;min-width:0;");
         var right = cameraEl("div", "display:flex;flex-direction:column;gap:12px;min-width:0;");
         studioPreviewCard(left, S);
@@ -223,8 +226,8 @@
         studioFramingCard(right, S);
         studioColorCard(right, S);
         studioDeliveryCard(right, S);
-        root.appendChild(left);
-        root.appendChild(right);
+        cols.appendChild(left);
+        cols.appendChild(right);
         cameraTlStudio.keep.cam = S.cam;
         cameraTlStudio.keep.hours = S.hours;
         return root;

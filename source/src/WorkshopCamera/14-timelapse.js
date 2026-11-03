@@ -25,7 +25,10 @@
 
       // Timelapse state + start / stop. It repaints with /state (every 3 s
       // with the viewer open) and stops listening when it leaves the page.
-      function cameraTlBox(alFinish) {
+      // opts.noStart: the box only tells what is going on (recording with its Stop button, building the video, the schedule): the Live tab of the
+      // technician starts a timelapse from its own form (cameraTlForm); the operator's box keeps the name and the Start button.
+      function cameraTlBox(alFinish, opts) {
+        var noStart = !!(opts && opts.noStart);
         var box = cameraEl("div", "display:flex;flex-direction:column;gap:6px;");
         var nombre = "";
         var busy = false;
@@ -122,8 +125,8 @@
                   .then(paint);
               })
             );
-            box.appendChild(row);
-            box.appendChild(cameraEl("div", "font-size:11px;color:var(--c-sec,#b0bec5);", i18nT('timelapse.by_hand_records_with_the_cameras')));
+            if (!noStart) box.appendChild(row);
+            if (!noStart) box.appendChild(cameraEl("div", "font-size:11px;color:var(--c-sec,#b0bec5);", i18nT('timelapse.by_hand_records_with_the_cameras')));
             if (tl.disk_free_gb != null)
               box.appendChild(cameraEl("div", "font-size:11px;color:" + (tl.disk_free_gb < 4 ? "var(--c-notice,#ffb74d)" : "var(--c-sec,#b0bec5)") + ";",
                 i18nT('timelapse.free_space_on_the_system', { gb: tl.disk_free_gb })));
@@ -141,7 +144,6 @@
           }
           if (notice) box.appendChild(cameraEl("div", "font-size:12px;color:var(--c-amber,#ffe082);", notice));
         }
-
         cameraStateListeners.push(paint);
         paint();
         return box;
@@ -149,11 +151,12 @@
 
       // Timelapse settings (over the sheet's draft; saved with
       // "Save settings"). t = borrador.timelapse.
-      // parte: "grabar" (cameras, photos, duration), "video" (how it is assembled) or
-      // nothing = both (2026-10-10: the settings are grouped in Settings).
+      // part: "record" (cameras, photos, duration), "video" (how it is assembled) or nothing = both (2026-10-10: the settings are grouped in Settings).
+      // The form of the Live tab (cameraTlForm) takes the same fields in two parts: "main" (cameras, one photo every...) and "more" (all the rest:
+      // date on the photos, duration, how the video is built, speed, title, hold at the end): the fields are the same, only ordered by how often they are used.
       function cameraTlSettings(t, rerender, part) {
         var box = cameraEl("div", "display:flex;flex-direction:column;gap:8px;margin:6px 0 0 " + (part ? "0" : "26px") + ";font-size:12px;");
-        var verRecord = part !== "video", verVideo = part !== "record";
+        var verMain = part !== "video" && part !== "more", verRecord = part !== "video" && part !== "main", verVideo = part !== "record" && part !== "main"; // cameras and photos / date and duration / how the video is built
         var inputCss = "width:56px;padding:4px;border-radius:4px;border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;";
         var selCss = "padding:4px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
         // without a saved list it is "camara" (without touching the draft: it does not mark changes)
@@ -191,7 +194,7 @@
         }
 
         // -- cameras --
-        if (verRecord) {
+        if (verMain) {
         box.appendChild(title(i18nT('timelapse.cameras_up_to_4')));
         var cs = ((cameraState && cameraState.cameras) || []).map(function (c) {
           return [c.id, c.name];
@@ -233,6 +236,8 @@
             t.each_s = Math.round(v);
           }), "s")
         );
+        }
+        if (verRecord) {
         var ls = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;");
         var cs2 = cameraEl("input");
         cs2.type = "checkbox";
@@ -301,7 +306,6 @@
         box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('timelapse.applies_to_manual_ones_and_to')));
         }
         if (!verVideo) return box;
-
         // -- video --
         box.appendChild(title(i18nT('common.video')));
         var sel = cameraEl("select", selCss);
@@ -368,7 +372,6 @@
             t.final_s = v;
           }), "s")
         );
-
         var sec = Math.max(2, t.each_s || 10);
         var photos = Math.round(3600 / sec);
         var res = cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;");
@@ -378,6 +381,63 @@
         res.appendChild(document.createTextNode(" " + Math.round(photos / (t.fps || 15)) + " s "));
         res.appendChild(cameraEl("span", null, i18nT('timelapse.of_video_the_video_is_built')));
         box.appendChild(res);
+        return box;
+      }
+
+      // The form "Record a timelapse" of the Live tab (technician): the same fields of cameraTlSettings, with the common ones in sight (when, cameras,
+      // one photo every, name) and the rest inside "More options". t = draft.timelapse (what the Studio and the store settings edit too).
+      // o = { t, rerender, form: { when, name, more } (kept by the page between redraws), saved (the timelapse of the service), onStart(), onCancel(),
+      //       onSchedule() (the schedule was set), goStudio() }
+      function cameraTlForm(o) {
+        var f = o.form;
+        var box = cameraEl("div", "display:flex;flex-direction:column;gap:10px;");
+        box.className = "ctl-tlform";
+        box.appendChild(cameraEl("div", "", i18nT('live.record_timelapse'))).className = "ctl-group-t";
+        var selCss = "padding:4px;min-height:32px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
+        var when = cameraEl("select", selCss);
+        [["job", i18nT('live.when_job')], ["now", i18nT('live.when_now')], ["schedule", i18nT('live.when_schedule')]].forEach(function (op) {
+          var e = cameraEl("option", null, op[1]);
+          e.value = op[0];
+          if (op[0] === f.when) e.selected = true;
+          when.appendChild(e);
+        });
+        when.addEventListener("change", function () {
+          f.when = when.value;
+          o.rerender();
+        });
+        var wl = cameraEl("label", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;");
+        wl.appendChild(cameraEl("span", "font-weight:bold;", i18nT('live.when')));
+        wl.appendChild(when);
+        box.appendChild(wl);
+        box.appendChild(cameraEl("div", "", i18nT(f.when === "job" ? 'live.when_job_hint' : f.when === "now" ? 'live.when_now_hint' : 'live.when_schedule_hint'))).className = "ctl-muted";
+        box.appendChild(cameraTlSettings(o.t, o.rerender, "main"));
+        if (f.when === "schedule") {
+          box.appendChild(cameraTlSchedule(o.onSchedule)); // 14-timelapse.js: starts, stops, name and its own Schedule button
+        } else if (f.when === "now") {
+          var nm = cameraEl("input", "min-width:0;width:100%;max-width:320px;");
+          nm.placeholder = i18nT('timelapse.name_optional');
+          nm.maxLength = 60;
+          nm.value = f.name || "";
+          nm.addEventListener("input", function () { f.name = nm.value; });
+          var nl = cameraEl("label", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;");
+          nl.appendChild(cameraEl("span", "font-weight:bold;", i18nT('common.name')));
+          nl.appendChild(nm);
+          box.appendChild(nl);
+        }
+        var more = cameraEl("details", "");
+        more.open = !!f.more;
+        more.addEventListener("toggle", function () { f.more = more.open; });
+        more.appendChild(cameraEl("summary", "cursor:pointer;font-weight:600;min-height:32px;", i18nT('live.more_options')));
+        more.appendChild(cameraTlSettings(o.t, o.rerender, "more"));
+        var link = cameraEl("div", "font-size:12px;margin-top:8px;");
+        link.appendChild(document.createTextNode(i18nT('live.frame_color_delivery') + " "));
+        link.appendChild(cameraBtn(i18nT('live.adjust_in_studio'), "", function () { o.goStudio(); }));
+        more.appendChild(link);
+        box.appendChild(more);
+        var acts = cameraEl("div", "display:flex;gap:8px;flex-wrap:wrap;");
+        if (f.when !== "schedule") acts.appendChild(cameraBtn(i18nT(f.when === "job" ? 'live.save_job_mode' : 'live.start'), "background:#1976d2;color:#fff;", function () { o.onStart(); }));
+        acts.appendChild(cameraBtn(i18nT('common.cancel'), "", function () { o.onCancel(); }));
+        box.appendChild(acts);
         return box;
       }
 

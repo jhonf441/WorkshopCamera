@@ -5,7 +5,7 @@
       // several, and edit a video (trim and change speed: the Pi builds
       // a NEW one and the original stays). Everything lives in the Pi's relay.
       // informe-07: the page is the home of everything of the camera that is not just looking. Its tabs are listed in 18-page-tabs.js
-      // (record, studio, videos, captures, cameras, image, settings); the floating viewer only looks and has a button that opens this page.
+      // (live, library, studio, cameras, image, store; in three groups); the floating viewer only looks and has a button that opens this page.
 
       var CAMERA_GAL_PATH = "/Plugins/Timelapses";
       var cameraGalleryPage = null; // the page that is mounted ({destroy}); the plugin's stop destroys it (13-service.js cameraCloseOpenViews)
@@ -44,11 +44,14 @@
         var filtro = "";
         var rango = null; // the time range of the search (workshopRangePicker): null = no limit in time
         var busFoco = false;
-        var viendo = null; // {tipo, item}
+        var viendo = null; // {kind, item}: the file open in the player of the library
+        var sub = "all"; // second level tab of the library (18-page-library.js): all | video | photo | keep
+        var multi = false; // "Choose several" of the library: tapping a card chooses it instead of opening it
         var msg = "", msgOk = true;
         var timer = null, puesta = cameraStartupCreate(); // puesta: start-up chip in the header, see cameraGalStartupAssemble
         // Tabs (18-page-tabs.js): the saved one if this view may use it
-        var pestana = cameraGalleryTab(CAMERA_PAGE_TAB_KEY); // 13-service-views.js
+        var pestana = cameraGalleryTab(CAMERA_PAGE_TAB_KEY); // 13-service-views.js (an id of the 7 tabs of before is moved to its section)
+        try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, pestana); } catch (e) { /* the page opens on the tab it had */ }
         var pageState = {}; // what the tabs of cameras and image keep between redraws (18-page-cameras.js); cameraPageForget empties it
         var cfg = null, borrador = null; // ajustes del servicio
         function loadCfg() {
@@ -147,8 +150,10 @@
           return cameraBtn(t, estilo, fn);
         }
         function irPestana(k) {
-          pestana = cameraPageTabsFor(cameraCanDo).indexOf(k) >= 0 ? k : "record";
+          k = cameraPageTabMigrate(k);
+          pestana = cameraPageTabsFor(cameraCanDo).indexOf(k) >= 0 ? k : "live";
           viendo = null;
+          multi = false;
           cameraPageForget(pageState);
           try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, pestana); } catch (e) { /* no critico */ }
           render();
@@ -176,11 +181,11 @@
             if (alTocar) c.addEventListener("click", alTocar);
             cab.appendChild(c);
           }
-          if (t && t.recording) chip(i18nT('common.recording') + " · " + (t.frames || 0) + " " + i18nT('timelapse.frames'), "red", function () { irPestana("record"); });
-          else if (t && t.scheduled) chip(i18nT('common.scheduled') + " " + (t.scheduled.since ? cameraDate(t.scheduled.since) : i18nT('gallery.now')), "blue", function () { irPestana("record"); });
+          if (t && t.recording) chip(i18nT('common.recording') + " · " + (t.frames || 0) + " " + i18nT('timelapse.frames'), "red", function () { irPestana("live"); });
+          else if (t && t.scheduled) chip(i18nT('common.scheduled') + " " + (t.scheduled.since ? cameraDate(t.scheduled.since) : i18nT('gallery.now')), "blue", function () { irPestana("live"); });
           if (t && (t.assembling || t.editing)) chip(i18nT('gallery.building_video'), "blue");
           if (t) {
-            chip(i18nT('common.videos') + " " + (t.videos_gb != null ? t.videos_gb : "?") + (cfg ? "/" + (cfg.timelapses_gb || 5) : "") + " GB", "gris", function () { irPestana("settings"); }, i18nT('gallery.where_and_how_much_is_stored'));
+            chip(i18nT('common.videos') + " " + (t.videos_gb != null ? t.videos_gb : "?") + (cfg ? "/" + (cfg.timelapses_gb || 5) : "") + " GB", "gris", function () { irPestana("store"); }, i18nT('gallery.where_and_how_much_is_stored'));
             chip(i18nT('gallery.free') + " " + (t.disk_free_gb != null ? t.disk_free_gb : "?") + " GB", t.disk_free_gb != null && t.disk_free_gb < 4 ? "red" : "gris");
           }
           var bAct = cameraBtn(i18nT('common.refresh'), "", function () { cameraPageForget(pageState); load(); loadCfg(); puesta.refresh(); });
@@ -198,112 +203,43 @@
           });
           page.appendChild(tabs);
           // banners and messages like a dense text v-alert (.ctl-alert)
-          if (t && t.recording && pestana !== "record") page.appendChild(cameraEl("div", "", i18nT('gallery.recording_now', { job: t.job || "", n: t.frames || 0 }))).className = "ctl-alert red";
+          if (t && t.recording && pestana !== "live") page.appendChild(cameraEl("div", "", i18nT('gallery.recording_now', { job: t.job || "", n: t.frames || 0 }))).className = "ctl-alert red";
           if (t && (t.assembling || t.editing)) page.appendChild(cameraEl("div", "", i18nT('gallery.the_system_is_building_a_video'))).className = "ctl-alert blue";
           if (msg) page.appendChild(cameraEl("div", "color:" + (msgOk ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)") + ";", msg)).className = "ctl-alert " + (msgOk ? "green" : "red");
           if (pb && pb.items && pb.items.length) page.appendChild(noticeByDelete());
-          if (pestana === "record") return renderRecord();
-          if (pestana === "settings" && cameraCanDo("settings")) return renderSettings();
+          if (pestana === "live") return cameraLiveTab(page, ctx()); // 18-page-live.js
+          if (pestana === "store" && cameraCanDo("settings")) return renderSettings();
           if (pestana === "studio" && cameraCanDo("settings")) return cameraStudioPage(page, ctx());
           if (pestana === "cameras" && cameraCanDo("cameras")) return cameraCamerasTab(page, ctx()); // 18-page-cameras.js
           if (pestana === "image" && cameraCanDo("cameras")) return cameraImageTab(page, ctx()); // 18-page-image.js
-          renderItems(pestana === "videos" ? "video" : "photo");
+          renderItems(); // library
         }
 
-        function renderRecord() {
-          var t0 = est && est.timelapse;
-          var cols = cameraEl("div", "");
-          cols.className = "ctl-grid";
-          function cardG(icon, title) {
-            var c = cameraEl("div", "");
-            c.className = "ctl-card wf-card";
-            var h = cameraEl("div", "");
-            h.className = "ctl-title";
-            h.appendChild(cameraEl("span", "")).className = "mdi " + icon;
-            h.appendChild(cameraEl("span", null, title));
-            c.appendChild(h);
-            cols.appendChild(c);
-            return c;
-          }
-          // start / stop the timelapse and the capture of each camera: the operator's, as the buttons of the viewer used to be (09-camera-roles.js)
-          if (cameraCanDo("timelapse")) cardG("mdi-record-rec", i18nT('common.timelapse')).appendChild(cameraTlBox(function () { load(); }));
-          if (t0 && t0.recording) {
-            // live: the latest photo of each camera being recorded
-            var cv = cardG("mdi-eye-outline", i18nT('gallery.live'));
-            var gv = cameraLiveGrid(t0);
-            cv.appendChild(gv);
-            cv.appendChild(cameraEl("div", "", i18nT('gallery.the_last_saved_photo_of_each'))).className = "ctl-muted";
-          }
-          if (cameraCanDo("settings")) cardG("mdi-calendar-clock", i18nT('common.schedule')).appendChild(cameraTlSchedule(function () { load(); })); // the schedule is the technician's
-          // how it is configured now (summary) + capture
-          var c2 = cardG("mdi-tune-variant", i18nT(cameraCanDo("settings") ? 'gallery.how_it_will_record' : 'roles.capture_card'));
-          if (!cfg) c2.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('common.reading')));
-          else if (cameraCanDo("settings")) { // limits, fps and assembly are the technician's
-            var tl = cfg.timelapse || {};
-            var cams = cameraTlNames(tl.cameras && tl.cameras.length ? tl.cameras : [tl.camera || "main"]);
-            var arm = cams.length < 2 ? i18nT('gallery.one_video') : tl.armed === "mosaic" ? i18nT('gallery.mosaic_lower') : tl.armed === "toggle" ? i18nT('gallery.switching_with_a_fade') : i18nT('gallery.one_video_per_camera');
-            [
-              [i18nT('cameras.cameras'), cams.join(", ")],
-              [i18nT('common.one_photo_every'), (tl.each_s || 10) + " s"],
-              [i18nT('common.stops_by_itself_after'), cameraFmtDoes((tl.max_min || 720) * 60)],
-              [i18nT('common.video'), (tl.fps || 15) + " " + i18nT('common.frames_per_s') + ", " + arm + (tl.title !== false ? ", " + (tl.title_style === "large" ? i18nT('gallery.with_a_large_title_card') : i18nT('gallery.with_a_small_name')) : "")],
-              [i18nT('gallery.with_every_job'), (tl.active ? i18nT('gallery.yes_starts_and_ends_on_its') : i18nT('gallery.no_only_by_hand'))],
-              [i18nT('common.photos'), (tl.trigger === "layer" ? i18nT('gallery.one_per_layer_3d_printing') : i18nT('gallery.by_time')) + (tl.stamp ? ", " + i18nT('gallery.with_date_and_time') : "")],
-              [i18nT('gallery.light'), (tl.deflicker ? i18nT('gallery.smooths_flicker') : i18nT('gallery.no_correction'))],
-            ].forEach(function (r) {
-              var f = cameraEl("div", "display:flex;gap:6px;");
-              f.appendChild(cameraEl("span", "color:var(--c-sec,#b0bec5);min-width:120px;", r[0]));
-              var v = cameraEl("span", null, r[1]);
-              f.appendChild(v);
-              c2.appendChild(f);
-            });
-            c2.appendChild(boton(i18nT('gallery.change_in_settings'), "align-self:flex-start;", function () { irPestana("settings"); }));
-          }
-          // captura ahora, de cualquier camara del relay
-          var cs = (est && est.cameras) || [];
-          if (cs.length && cameraCanDo("capture")) {
-            c2.appendChild(cameraEl("div", "font-weight:bold;margin-top:6px;", i18nT('gallery.capture_now')));
-            var fc = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
-            cs.forEach(function (c) {
-              fc.appendChild(boton(c.name, "", function () {
-                cameraRelayCapture(c.id)
-                  .then(function (d) {
-                    if (!d.ok) return notice(i18nT('common.couldn_t_error', { error: d.error || "" }), false);
-                    notice(i18nT('gallery.capture_saved') + " " + c.name);
-                    load();
-                  })
-                  .catch(function (e) { notice(i18nT('common.couldn_t_error', { error: String(e.message || e) }), false); });
-              }));
-            });
-            c2.appendChild(fc);
-            c2.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('gallery.saves_the_photo_with_the_date')));
-          }
-          if (cameraCanDo("settings")) cardG("mdi-help-circle-outline", i18nT('common.how_it_works')).appendChild(cameraAsWorks());
-          page.appendChild(cols);
-        }
-
-        // what the Studio and the Settings tab share: the draft, the saved settings and how to save or drop the draft (18-tl-studio-cards.js)
+        // what the Studio, the Live form and the Storage tab share: the draft, the saved settings and how to save or drop the draft (18-tl-studio-cards.js)
         function ctx() {
           return { draft: borrador, cfg: cfg, est: est, rerender: render, notice: notice, reload: load, go: irPestana, state: pageState, startup: puesta,
             saved: function (c) { cfg = c; borrador = JSON.parse(JSON.stringify(c)); }, discard: function () { borrador = JSON.parse(JSON.stringify(cfg)); } };
         }
 
+        // ---- Tab "Storage and system" ----
         function renderSettings() {
           if (!borrador) {
             page.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('gallery.reading_the_system_s_settings')));
             return;
           }
           var t = (est && est.timelapse) || {};
-          page.appendChild(cameraSettingsComplete(borrador, cfg, {
-            columns: true,
+          cameraSettingsComplete(borrador, cfg, {
+            parent: page,
             rerender: render,
             usage: { videos_gb: t.videos_gb, free_gb: t.disk_free_gb, videos: tls ? tls.length : null, captures: caps ? caps.length : null },
             save: cameraStudioSaver(ctx()),
             undo: function () { ctx().discard(); render(); },
-          }));
+            relay: function (card) { cameraStoreRelay(card, ctx()); }, // 18-page-cameras.js: the relay is a subsection of the same card
+          });
         }
 
-        function renderItems(kindItems) {
+        // ---- Tab "Library": the videos and the captures in one place (18-page-library.js says what each second level tab lists) ----
+        function renderItems() {
           var bus = cameraEl("input", "width:200px;"); // field look: .ctl input (DESIGN.md 4)
           bus.placeholder = i18nT('gallery.search_by_name');
           bus.value = filtro;
@@ -316,16 +252,31 @@
             page.appendChild(cameraEl("div", "color:var(--c-error,#ef9a9a);", i18nT('gallery.could_not_read_the_system_relay')));
             return;
           }
+          // second level tabs (wf-tabs): All | Videos (n) | Captures (n) | Kept
+          var n = cameraLibraryCounts(tls, caps);
+          var tabsEl = cameraEl("div", "margin-bottom:12px;");
+          tabsEl.className = "wf-tabs";
+          tabsEl.setAttribute("role", "tablist");
+          [["all", i18nT('library.all')], ["video", i18nT('common.videos') + " (" + n.video + ")"], ["photo", i18nT('common.captures') + " (" + n.photo + ")"], ["keep", i18nT('library.kept')]].forEach(function (o) {
+            var b = cameraEl("button", "", o[1]);
+            b.type = "button";
+            b.className = "wf-tab" + (sub === o[0] ? " on" : "");
+            b.setAttribute("role", "tab");
+            b.setAttribute("aria-selected", sub === o[0] ? "true" : "false");
+            b.addEventListener("click", function () { sub = o[0]; render(); });
+            tabsEl.appendChild(b);
+          });
+          page.appendChild(tabsEl);
           var f = filtro.trim().toLowerCase();
           var ahora = new Date();
           function passes(x) {
             return (!f || (nameOf(x) + " " + (x.start || x.ts || "")).toLowerCase().indexOf(f) >= 0) && workshopRangeHas(rango, x.start || x.ts, ahora);
           }
 
-          // -- en grande + editor --
-          if (viendo && viendo.kind === kindItems) page.appendChild(panelVer());
+          // -- the file that is open: player, rename, keep, download, trim / speed (videos), delete --
+          if (viendo) page.appendChild(panelVer());
 
-          // -- seleccion --
+          // -- search and choosing several --
           var chosen = Object.keys(sel).filter(function (k) { return sel[k]; });
           var bar = cameraEl("div", "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;");
           bar.appendChild(bus);
@@ -335,36 +286,40 @@
             busFoco = false; // seguir escribiendo despues de filtrar
             setTimeout(function () { bus.focus(); bus.setSelectionRange(bus.value.length, bus.value.length); }, 0);
           }
-          bar.appendChild(cameraEl("span", null, chosen.length ? i18nT('gallery.selected_n', { n: chosen.length }) : i18nT('gallery.tap_each_checkbox_to_choose_several')));
-          if (chosen.length) {
-            bar.appendChild(boton(i18nT('gallery.download_selected'), "", function () {
-              chosen.forEach(function (a, i) {
-                setTimeout(function () { download(/\.mp4$/.test(a) ? "video" : "photo", a); }, i * 400);
-              });
-            }));
-            bar.appendChild(cameraBtnDouble(i18nT('gallery.delete_selected'), i18nT('common.delete_confirm'), "", function () { deleteSeveral(chosen); }));
-            bar.appendChild(boton(i18nT('gallery.clear_selection'), "", function () { sel = {}; render(); }));
-          }
+          bar.appendChild(boton(i18nT(multi ? 'library.done_choosing' : 'library.choose_several'), multi ? "border:1px solid #1976d2;" : "", function () {
+            multi = !multi;
+            sel = {};
+            viendo = null;
+            render();
+          }));
           page.appendChild(bar);
-
-          if (kindItems === "video") {
-          // -- timelapses --
-          var lt = (tls || []).filter(passes);
-          page.appendChild(cameraEl("div", "", i18nT('service.timelapses') + " (" + lt.length + ")")).className = "ctl-section";
-          var gv = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;");
-          lt.forEach(function (x) { gv.appendChild(card("video", x)); });
-          if (!lt.length) gv.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('gallery.no_timelapses_they_re_recorded_in')));
-          page.appendChild(gv);
-          return;
+          if (multi) {
+            var sb = cameraEl("div", "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;padding:8px 10px;border:1px solid var(--c-edge,rgba(128,128,128,0.3));border-radius:8px;");
+            sb.appendChild(cameraEl("span", null, chosen.length ? i18nT('gallery.selected_n', { n: chosen.length }) : i18nT('gallery.tap_each_checkbox_to_choose_several')));
+            if (chosen.length) {
+              sb.appendChild(boton(i18nT('gallery.keep'), "", function () { keep(chosen, true); }));
+              sb.appendChild(boton(i18nT('gallery.download_selected'), "", function () {
+                chosen.forEach(function (a, i) {
+                  setTimeout(function () { download(/\.mp4$/.test(a) ? "video" : "photo", a); }, i * 400);
+                });
+              }));
+              sb.appendChild(cameraBtnDouble(i18nT('gallery.delete_selected'), i18nT('common.delete_confirm'), "", function () { deleteSeveral(chosen); }));
+              sb.appendChild(boton(i18nT('gallery.clear_selection'), "", function () { sel = {}; render(); }));
+            }
+            page.appendChild(sb);
           }
 
-          // -- capturas --
-          var lc = (caps || []).filter(passes);
-          page.appendChild(cameraEl("div", "", i18nT('common.captures') + " (" + lc.length + ")")).className = "ctl-section";
-          var gc = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;");
-          lc.slice(0, 300).forEach(function (x) { gc.appendChild(card("photo", x)); });
-          if (!lc.length) gc.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('gallery.no_captures_take_them_in_record')));
-          page.appendChild(gc);
+          // -- the cards: videos and captures, newest first --
+          var items = cameraLibraryItems(tls, caps, sub, passes);
+          var shown = 0;
+          var g = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;");
+          items.forEach(function (it) {
+            if (it.kind === "photo" && shown >= 300) return; // the captures can be thousands: the first 300 (the search narrows them)
+            if (it.kind === "photo") shown++;
+            g.appendChild(card(it.kind, it.x));
+          });
+          if (!items.length) g.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT(sub === "keep" ? 'library.nothing_kept' : sub === "video" ? 'gallery.no_timelapses_they_re_recorded_in' : sub === "photo" ? 'gallery.no_captures_take_them_in_record' : 'library.empty')));
+          page.appendChild(g);
         }
 
         function card(kind, x) {
@@ -375,6 +330,11 @@
           im.loading = "lazy";
           cameraOwnError(im); // appended below: the note needs the parent
           im.addEventListener("click", function () {
+            if (multi) { // choosing several: a tap chooses the card
+              sel[x.file] = !sel[x.file];
+              render();
+              return;
+            }
             viendo = { kind: kind, item: x };
             render();
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -382,14 +342,17 @@
           c.appendChild(im);
           var pie = cameraEl("div", "padding:6px 8px;display:flex;flex-direction:column;gap:2px;font-size:12px;");
           var l1 = cameraEl("label", "display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;");
-          var cb = cameraEl("input");
-          cb.type = "checkbox";
-          cb.checked = !!sel[x.file];
-          cb.addEventListener("change", function () {
-            sel[x.file] = cb.checked;
-            render();
-          });
-          l1.appendChild(cb);
+          if (multi) {
+            var cb = cameraEl("input");
+            cb.type = "checkbox";
+            cb.checked = !!sel[x.file];
+            cb.addEventListener("change", function () {
+              sel[x.file] = cb.checked;
+              render();
+            });
+            l1.appendChild(cb);
+          }
+          l1.appendChild(cameraEl("span", "font-size:10px;font-weight:700;border:1px solid var(--c-edge,rgba(128,128,128,0.3));border-radius:99px;padding:0 6px;flex:none;", i18nT(kind === "video" ? 'library.tag_video' : 'library.tag_photo')));
           l1.appendChild(cameraEl("span", "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", nameOf(x)));
           pie.appendChild(l1);
           if (x.pending_delete_until) pie.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);font-weight:bold;", i18nT('gallery.deleted_by_itself_on', { date: cameraDate(x.pending_delete_until) })));
@@ -496,7 +459,8 @@
           var t = d && d.timelapse;
           var busy = !!(t && (t.recording || t.assembling || t.editing));
           // algo cambia en la Pi, o recien termino de armarse un video
-          if ((busy || busyBefore) && cameraPageReloads(pestana)) load(); // the tabs that hold what is being typed are not redrawn
+          var held = pestana === "library" ? cameraLibraryBusy(viendo, Object.keys(sel).filter(function (k) { return sel[k]; }).length) : !!(pageState.live && pageState.live.open); // the form of the timelapse is open
+          if ((busy || busyBefore) && cameraPageReloads(pestana, held)) load(); // the tabs that hold what is being typed (or a player, or a selection) are not redrawn
           busyBefore = busy;
         });
         return cameraGalleryHandle(page, function () { clearInterval(timer); });

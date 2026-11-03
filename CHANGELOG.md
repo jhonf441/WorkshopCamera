@@ -1,5 +1,43 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.12.6 -- 2026-11-03
+
+- Camera: one honest state per image (fresh, waiting, stale, black, down), recovery help, viewer badge says live only with fresh frames
+
+## Unreleased
+
+- One judgement of how a camera is doing (fresh, waiting, stale, black, does not respond, relay unreachable), from what the browser sees of the picture (a frame loaded and when, a failed request, a frame measured all near black, the same frame again and again) and what the relay says of the camera (/state). The viewer's badge, the picture of the Live and Image sections, the in-place note and the mosaic paint that one state with the same words and colours (green fresh, amber stopped or black, red does not respond); the viewer never says LIVE from the mode alone
+- Help to bring a camera back, under the picture of the page and reachable from the viewer: a checklist cheapest first (ask for the picture again, check the relay now, ask whether the camera answers, switch the light on for a black picture, restart the system relay with two taps for the technician) with what each result means, and the manual steps written out (power cycle, network and address, the commands to run on the system). Restarting the camera itself is not an operation of the service, so it is never offered as a button
+- The Live grid of a recording no longer says "the camera does not respond" for a camera whose photo is not there yet
+
+## 2.12.5 -- 2026-11-02
+
+- Range picker split into small functions; cut area tip without naming the plugin
+
+## 2.12.4 -- 2026-11-01
+
+- WorkshopCamera: nav scroll finds the new bar after a redraw
+
+## 2.12.3 -- 2026-11-01
+
+- Camera: Estudio as one card
+
+## 2.12.2 -- 2026-11-01
+
+- WorkshopCamera: nav scroll second try; camera preview late photo
+
+## 2.12.1 -- 2026-11-01
+
+- Camera: one card per section (Imagen, Almacenamiento, En vivo), scroll to start on section change
+
+## 2.12.0 -- 2026-11-01
+
+- Camera: the page has 6 sections in 3 groups (Operar: En vivo, Biblioteca; Calidad del video: Estudio; Configurar: Camaras, Imagen, Almacenamiento), videos and captures in one library, the timelapse form with its main fields and More options, the relay in Storage
+
+## 2.11.11 -- 2026-10-31
+
+- Camera: the relay is an optional tile of the control bar (off by default, technician and admin)
+
 ## 2.11.10 -- 2026-10-31
 
 - Camera: one list of cameras from the service, flash and image settings by the service API, relay writes by the API, no POST to the relay

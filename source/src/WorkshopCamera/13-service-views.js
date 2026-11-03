@@ -19,13 +19,15 @@
       }
 
       // The tab the page opens on: the one the address asks for (/Plugins/Timelapses?tab=cameras: the link of another page, such as the page of the
-      // service) or else the saved one; "record" when there is none or it is not allowed to this view (18-page-tabs.js).
+      // service) or else the saved one; an id of the 7 tabs of before is moved to its section (cameraPageTabMigrate); "live" when there is none or it is not
+      // allowed to this view (18-page-tabs.js).
       function cameraGalleryTab(key) {
         var wanted = null;
         try {
           wanted = workshopHostCurrentQuery().tab || localStorage.getItem(key);
         } catch (e) {
-          /* record */
+          /* live */
         }
-        return cameraPageTabsFor(cameraCanDo).indexOf(wanted) >= 0 ? wanted : "record";
+        wanted = cameraPageTabMigrate(wanted);
+        return cameraPageTabsFor(cameraCanDo).indexOf(wanted) >= 0 ? wanted : "live";
       }

@@ -36,13 +36,15 @@
         return null;
       }
 
-      // A short line: "12 fps · 85 kB/s · 2 mirando", "reconnecting...", ...
+      // A short line: "12 fps · 85 kB/s · 2 mirando", "reconnecting...", ... A camera that does not respond or whose frames stopped, by the relay's
+      // own numbers, says so with the words of the one judgement (14-health.js), the same as the viewer's badge and the picture of the page.
       function cameraStateText(e) {
         if (!e) return "";
         var warning = cameraProtoWarning(); // the page and the service do not speak the same contract: say so before anything else
         if (warning) return warning;
+        var bad = cameraHealthFromRelay(e);
+        if (bad) return cameraHealthWord(bad, i18nT);
         if (!cameraCanDo("tech_terms")) return cameraPlainState(e, cameraState && cameraState.load, i18nT); // fps, kB/s and "relay" are for the technician
-        if (e.drop) return i18nT('service.not_answering_for_n_min', { n: Math.round((e.without_response_s || 0) / 60) });
         var load = cameraState && cameraState.load && cameraState.load.level;
         if (e.state === "connected")
           return (e.fps != null ? e.fps + " fps" : "") + (e.kbps != null ? " · " + Math.round(e.kbps) + " kB/s" : "") + " · " + i18nT('service.n_watching', { n: e.clients }) + (load >= 2 ? " · " + i18nT('service.system_very_loaded') : load >= 1 ? " · " + i18nT('service.system_loaded') : "");
@@ -53,7 +55,8 @@
       // The colors of a state: the variables of the page (.ctl, both themes), with the dark values as the fallback (the mosaic is a dark box outside the page)
       function cameraStateColor(e) {
         if (!e) return "var(--c-sec,#b0bec5)";
-        if (e.drop) return "var(--c-error,#ef9a9a)";
+        var bad = cameraHealthFromRelay(e);
+        if (bad) return cameraHealthTextColor(bad.state);
         if (e.state === "connected") return "var(--c-green,#a5d6a7)";
         if (e.state === "reconnecting" || e.state === "connecting") return "var(--c-notice,#ffb74d)";
         return "var(--c-sec,#b0bec5)";
@@ -138,6 +141,22 @@
         if (cameraGalleryPage) cameraGalleryPage.destroy();
       }
 
+      // The line under each camera of the mosaic: what the judgement of its picture says when it is not alive (14-health.js: the same words as
+      // everywhere else), else the numbers of the relay. states = [{rid, el, w (the watch of the picture, null until its address is known)}].
+      function cameraMosaicPaintStates(states) {
+        states.forEach(function (x) {
+          var e = cameraStateOf(x.rid);
+          var h = x.w && x.w.h;
+          if (h && h.state !== "fresh" && h.state !== "waiting") {
+            x.el.textContent = cameraHealthWord(h, i18nT);
+            x.el.style.color = cameraHealthTextColor(h.state);
+            return;
+          }
+          x.el.textContent = x.rid ? cameraStateText(e) || i18nT(cameraCanDo("tech_terms") ? 'service.no_data_from_the_relay' : 'roles.no_data') : i18nT(cameraCanDo("tech_terms") ? 'service.direct_not_through_the_relay' : 'roles.direct');
+          x.el.style.color = cameraStateColor(e);
+        });
+      }
+
       function cameraOpenMosaic() {
         var old = document.getElementById(CAMERA_MOSAIC_ID);
         if (old) {
@@ -174,14 +193,8 @@
         box.appendChild(cab);
         var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;");
         box.appendChild(grid);
-        var states = [];
-        function paintStates() {
-          states.forEach(function (x) {
-            var e = cameraStateOf(x.rid);
-            x.el.textContent = x.rid ? cameraStateText(e) || i18nT(cameraCanDo("tech_terms") ? 'service.no_data_from_the_relay' : 'roles.no_data') : i18nT(cameraCanDo("tech_terms") ? 'service.direct_not_through_the_relay' : 'roles.direct');
-            x.el.style.color = cameraStateColor(e);
-          });
-        }
+        var states = []; // [{rid, el, w}]: the line of each camera and the judgement of its picture
+        var paintStates = function () { cameraMosaicPaintStates(states); };
         cameraStateListeners.push(paintStates);
         cameraLoadList().then(function (items) {
           var elegida = cameraChosen();
@@ -198,7 +211,8 @@
             pie.appendChild(est);
             t.appendChild(pie);
             grid.appendChild(t);
-            states.push({ rid: cameraRelayId(c), el: est });
+            var entry = { rid: cameraRelayId(c), el: est, w: null };
+            states.push(entry);
             t.addEventListener("click", function () {
               cerrar();
               cameraChoose(c.id);
@@ -211,7 +225,8 @@
               if (!document.body.contains(background)) return;
               var direct = c.esp32 && c.relay === false;
               var live = !!u.video && !direct && (c.id === cameraLiveId || !u.photo);
-              badge(live);
+              entry.w = cameraHealthWatch(im, c, { video: live, photo: u.photo, onChange: function (W) { badge(live, W.h); paintStates(); } }); // the mosaic closes with cameraViewTeardown
+              badge(live, entry.w.h);
               if (live) {
                 im.src = u.video;
               } else if (u.photo) {

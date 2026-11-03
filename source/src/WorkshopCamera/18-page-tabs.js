@@ -6,40 +6,66 @@
 
       var CAMERA_PAGE_TAB_KEY = "workshopTlTab"; // the tab this screen had last (localStorage)
 
-      // [id, icon, the view feature that shows it (09-camera-roles.js)]
+      // [id, icon, the view feature that shows it (09-camera-roles.js), group]. Six sections in three groups (informe-07, mockup approved 2026-11-01):
+      //   Operate: live (look, capture, record a timelapse), library (videos and captures in one place)
+      //   Video quality: studio
+      //   Configure: cameras, image, store (space, limits, notices and the system relay)
+      var CAMERA_PAGE_GROUPS = ["page.g_operate", "page.g_quality", "page.g_configure"]; // the i18n key of each group
       var CAMERA_PAGE_TABS = [
-        ["record", "mdi-record-rec", "gallery"],
-        ["studio", "mdi-movie-edit-outline", "settings"],
-        ["videos", "mdi-movie-open-outline", "gallery"],
-        ["captures", "mdi-image-multiple-outline", "gallery"],
-        ["cameras", "mdi-cctv", "cameras"],
-        ["image", "mdi-camera-iris", "cameras"],
-        ["settings", "mdi-cog-outline", "settings"],
+        ["live", "mdi-video", "gallery", 0],
+        ["library", "mdi-folder-multiple-image", "gallery", 0],
+        ["studio", "mdi-movie-edit-outline", "settings", 1],
+        ["cameras", "mdi-cctv", "cameras", 2],
+        ["image", "mdi-camera-iris", "cameras", 2],
+        ["store", "mdi-harddisk", "settings", 2],
       ];
+
+      // Pure. The id a saved or asked-for tab has today: the ids of the 7 tabs of before map to their section; anything else falls on "live".
+      var CAMERA_PAGE_TAB_OLD = { record: "live", videos: "library", captures: "library", settings: "store" };
+      function cameraPageTabMigrate(id) {
+        if (typeof id !== "string") return "live";
+        if (Object.prototype.hasOwnProperty.call(CAMERA_PAGE_TAB_OLD, id)) return CAMERA_PAGE_TAB_OLD[id];
+        return CAMERA_PAGE_TABS.some(function (t) { return t[0] === id; }) ? id : "live";
+      }
 
       // Pure. The ids of the tabs a view can use, in order; canDo(feature) says whether the view has a feature.
       function cameraPageTabsFor(canDo) {
         return CAMERA_PAGE_TABS.filter(function (t) { return canDo(t[2]); }).map(function (t) { return t[0]; });
       }
 
+      // Pure. The same tabs by group: [{ label: the i18n key of the group, ids: [...] }], a group with no tab for the view is left out.
+      function cameraPageGroupsFor(canDo) {
+        return CAMERA_PAGE_GROUPS.map(function (key, g) {
+          return { label: key, ids: CAMERA_PAGE_TABS.filter(function (t) { return t[3] === g && canDo(t[2]); }).map(function (t) { return t[0]; }) };
+        }).filter(function (g) { return g.ids.length; });
+      }
+
       function cameraPageTabIcon(id) {
         return CAMERA_PAGE_TABS.filter(function (t) { return t[0] === id; })[0][1];
       }
 
-      // The words of a tab; the videos and captures carry how many there are (null = not read yet).
-      function cameraPageTabLabel(id, tls, caps) {
-        if (id === "record") return i18nT('gallery.record');
+      // The words of a tab. The library carries how many files there are (null = not read yet); see cameraPageTabCount.
+      function cameraPageTabLabel(id) {
+        if (id === "live") return i18nT('page.live');
+        if (id === "library") return i18nT('page.library');
         if (id === "studio") return i18nT('studio.nav');
-        if (id === "videos") return i18nT('common.videos') + (tls ? " (" + tls.length + ")" : "");
-        if (id === "captures") return i18nT('common.captures') + (caps ? " (" + caps.length + ")" : "");
         if (id === "cameras") return i18nT('cameras.cameras');
         if (id === "image") return i18nT('image.nav');
-        return i18nT('common.settings');
+        return i18nT('page.store');
       }
 
-      // Pure. The tabs that hold what the person is typing (an editor, a draft, a slider) are not redrawn by the 3 s reload of the page.
-      function cameraPageReloads(tab) {
-        return ["studio", "cameras", "image"].indexOf(tab) < 0;
+      // Pure. The figure on the side of the library (videos + captures), or "" while neither list is read.
+      function cameraPageTabCount(id, tls, caps) {
+        if (id !== "library" || (!tls && !caps)) return "";
+        return String((tls ? tls.length : 0) + (caps ? caps.length : 0));
+      }
+
+      // Pure. The tabs that hold what the person is typing (an editor, a draft, a slider) are not redrawn by the 3 s reload of the page; the
+      // live tab keeps the form of the timelapse and the library its selection, so each is left alone while it holds something (busy = true).
+      function cameraPageReloads(tab, busy) {
+        if (["studio", "cameras", "image", "store"].indexOf(tab) >= 0) return false;
+        if ((tab === "live" || tab === "library") && busy) return false;
+        return true;
       }
 
       // The state the tabs keep between redraws of the page (the camera being edited, the relay model...): leaving a tab or pressing Refresh drops it.
@@ -60,25 +86,33 @@
         fold.appendChild(cameraEl("span", "")).className = "mdi " + (o.folded ? "mdi-chevron-double-right" : "mdi-chevron-double-left");
         fold.addEventListener("click", o.onFold);
         nav.appendChild(cameraNavHead(o.pinned, o.folded, fold, o.onPin));
-        cameraPageTabsFor(cameraCanDo).forEach(function (id) {
-          var label = cameraPageTabLabel(id, o.tls, o.caps);
-          var b = cameraEl("button", "");
-          b.className = "wf-nav-item ctl-nav-item" + (o.tab === id ? " on" : "");
-          b.type = "button";
-          b.title = label;
-          b.appendChild(cameraEl("span", "")).className = "wf-nav-icon mdi " + cameraPageTabIcon(id);
-          b.appendChild(cameraEl("span", null, label)).className = "tx";
-          b.addEventListener("click", function () { o.onTab(id); });
-          nav.appendChild(b);
+        cameraPageGroupsFor(cameraCanDo).forEach(function (gr, gi) {
+          var gt = cameraEl("div", "", i18nT(gr.label));
+          gt.className = "wf-nav-group st-group ctl-nav-group"; // st-group: the family takes the border off the first one
+          gt.setAttribute("data-group", String(gi));
+          nav.appendChild(gt);
+          gr.ids.forEach(function (id) {
+            var label = cameraPageTabLabel(id);
+            var count = cameraPageTabCount(id, o.tls, o.caps);
+            var b = cameraEl("button", "");
+            b.className = "wf-nav-item ctl-nav-item" + (o.tab === id ? " on" : "");
+            b.type = "button";
+            b.title = label + (count ? " (" + count + ")" : "");
+            b.appendChild(cameraEl("span", "")).className = "wf-nav-icon mdi " + cameraPageTabIcon(id);
+            b.appendChild(cameraEl("span", null, label)).className = "tx";
+            if (count) b.appendChild(cameraEl("span", null, count)).className = "st-badge ctl-nav-count";
+            b.addEventListener("click", function () { o.onTab(id); });
+            nav.appendChild(b);
+          });
         });
         return nav;
       }
 
-      // To the page of the plugin, on a tab (the Record tab holds the capture and the timelapse): the route is pushed through the host; without a
+      // To the page of the plugin, on a tab (the Live tab holds the capture and the timelapse): the route is pushed through the host; without a
       // host to push it, a plain navigation. The button of the viewer and the page itself ask for it here.
       function cameraOpenPage(tab) {
         if (tab) {
-          try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, tab); } catch (e) { /* the page opens on the tab it had */ }
+          try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, cameraPageTabMigrate(tab)); } catch (e) { /* the page opens on the tab it had */ }
         }
         if (!workshopHostPush(CAMERA_GAL_PATH)) window.location.href = CAMERA_GAL_PATH;
       }

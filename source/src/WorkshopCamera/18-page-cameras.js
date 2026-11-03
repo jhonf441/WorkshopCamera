@@ -1,8 +1,9 @@
       // ---- Page tab "Cameras" (informe-07) ----
       //
       // What the gear of the floating viewer used to open: the list of cameras (the one this screen shows, add, edit, remove), the search on the
-      // network, "See all" (the mosaic) and the card of the system relay (state, stop, start). The viewer only looks now; the setting of the
-      // cameras is here, for the technician (features "cameras" and "relay" of 09-camera-roles.js).
+      // network and "See all" (the mosaic). The card of the system relay (state, stop, start) moved to the section "Storage and system"
+      // (cameraStoreRelay, below): the tab only reads the relay's state to say where each camera's video comes from. The viewer only looks now;
+      // the setting of the cameras is here, for the technician (feature "cameras" of 09-camera-roles.js).
       // One plain object holds the tab between redraws of the page (ctx.state.cameras); the functions take it (docs-internal/ARQUITECTURA.md):
       //   S = { ctx, root (the grid on screen), editing: { i, c } | null (i < 0: a new camera), msg, scanOpen, scan: { box, status } | null,
       //         rs (the relay model of 12-relay.js) }
@@ -28,7 +29,24 @@
         cameraCamerasListCard(grid, S);
         if (S.editing) cameraCamerasEditor(grid, S); // 18-page-cameras-edit.js
         if (S.scanOpen) cameraCamerasScanCard(grid, S);
-        grid.appendChild(cameraRelayCard(S.rs, cameraEl, cameraBtn)); // 12-relay.js: only the technician's view gets it
+      }
+
+      // The system relay as a subsection (wf-sub) inside the one card of "Storage and system" (feature "relay": only the technician's view gets it). Its model is
+      // the one of 12-relay.js, kept in the state of the page like the tabs' own.
+      function cameraStoreRelay(card, ctx) {
+        if (!cameraCanDo("relay")) return;
+        var R = ctx.state.relay;
+        if (!R) {
+          R = ctx.state.relay = { root: null, rs: null };
+          R.rs = cameraRelayModel(
+            function () { return !!(R.root && R.root.isConnected); },
+            function () { ctx.rerender(); },
+            function () { ctx.rerender(); ctx.startup.refresh(); }
+          );
+          cameraRelayLoad(R.rs);
+        }
+        R.root = cameraRelayCard(R.rs, cameraEl, cameraBtn, true); // 12-relay.js: a subsection of the card of the store section
+        card.appendChild(R.root);
       }
 
       function cameraCamerasSay(S, text) {

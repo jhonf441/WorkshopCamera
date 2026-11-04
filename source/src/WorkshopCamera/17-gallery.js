@@ -234,7 +234,6 @@
             usage: { videos_gb: t.videos_gb, free_gb: t.disk_free_gb, videos: tls ? tls.length : null, captures: caps ? caps.length : null },
             save: cameraStudioSaver(ctx()),
             undo: function () { ctx().discard(); render(); },
-            relay: function (card) { cameraStoreRelay(card, ctx()); }, // 18-page-cameras.js: the relay is a subsection of the same card
           });
         }
 

@@ -1,5 +1,21 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.1 -- 2026-11-04
+
+- The viewer cannot be made smaller than 190 x 120 px, and under 300 px wide the page button and the camera chips become icons / numbers
+
+## 2.13.0 -- 2026-11-04
+
+- The relay control (Stop / Start and its bar tile) moved to the service page; Camera keeps the relay state and Restart relay
+
+## 2.12.11 -- 2026-11-04
+
+- Session notice: latest shared copy
+
+## 2.12.10 -- 2026-11-04
+
+- Refusal banners of the Timelapse page are marked too (hidden when it is about the session)
+
 ## 2.12.9 -- 2026-11-03
 
 - Sesion: tarjeta de aviso estandar tipo consola

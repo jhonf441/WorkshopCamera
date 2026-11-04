@@ -34,7 +34,6 @@
         },
       };
       workshopRegisterPanel("camera", CAMERA_PANEL);
-      cameraRegisterBarTile(); // 12-relay-tile.js: the relay as an optional card of the bar (off until a screen turns it on)
       cameraWatchIdentity(); // 09-camera-roles.js: the panel appears or goes away when the person logs in or out
 
       // Without a sidebar installed, the camera shows its own floating button.

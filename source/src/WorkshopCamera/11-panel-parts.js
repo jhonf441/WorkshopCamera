@@ -89,18 +89,19 @@
         var selector = document.createElement("div");
         selector.style.cssText = "position:absolute;left:64px;right:34px;top:4px;display:none;gap:4px;justify-content:center;overflow-x:auto;z-index:1;scrollbar-width:none;";
         panel.appendChild(selector);
-        return function () {
+        var render = function () {
           selector.textContent = "";
           selector.style.display = cameraList.length > 1 ? "flex" : "none";
           var current = cameraChosen();
           cameraList.forEach(function (c) {
             var b = document.createElement("button");
             b.type = "button";
-            b.textContent = c.name;
+            var compact = cameraIsCompact(panel);
+            b.textContent = compact ? String(cameraList.indexOf(c) + 1) : c.name; // narrow viewer: the number, the name stays in the tooltip
             b.title = c.name;
             var on = c === current;
             b.style.cssText =
-              "flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;height:24px;padding:0 9px;border-radius:12px;border:1px solid rgba(255,255,255,0.6);font:bold 11px Roboto,sans-serif;cursor:pointer;touch-action:none;" +
+              "flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;height:24px;padding:0 " + (compact ? 8 : 9) + "px;border-radius:12px;border:1px solid rgba(255,255,255,0.6);font:bold 11px Roboto,sans-serif;cursor:pointer;touch-action:none;" +
               (on ? "background:#1976d2;color:#fff;" : "background:rgba(0,0,0,0.55);color:#eceff1;");
             b.addEventListener("pointerdown", function (ev) {
               ev.stopPropagation();
@@ -113,6 +114,8 @@
             selector.appendChild(b);
           });
         };
+        panel.addEventListener("camera-compact", render); // the width crossed the limit: names <-> numbers
+        return render;
       }
 
       // The one button of the viewer that is not about looking (bottom right): "Open capture and timelapse" opens the page of the plugin on its
@@ -130,6 +133,17 @@
         b.style.cssText =
           "position:absolute;left:128px;right:26px;bottom:4px;height:26px;border-radius:13px;border:none;background:#e0e0e0;color:#000;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;font:bold 11px Roboto,sans-serif;cursor:pointer;touch-action:none;z-index:1;overflow:hidden;";
         panel.appendChild(b);
+        // narrow viewer: the word goes and the button is the round icon (the tooltip keeps the words)
+        function paint() {
+          var compact = cameraIsCompact(panel);
+          label.style.display = compact ? "none" : "";
+          b.style.right = compact ? "auto" : "26px";
+          b.style.width = compact ? "26px" : "";
+          b.style.padding = compact ? "0" : "0 8px";
+          b.style.borderRadius = compact ? "50%" : "13px";
+        }
+        paint();
+        panel.addEventListener("camera-compact", paint);
         b.addEventListener("pointerdown", function (ev) {
           ev.stopPropagation();
           ev.preventDefault(); // see the note in viewBtn pointerdown
@@ -163,7 +177,28 @@
           "user-select:none",
           "cursor:move",
         ].join(";");
+        cameraWatchCompact(panel);
         return panel;
+      }
+
+      // Is the viewer narrow enough for icons only? width in px (the panel's own, or its style before it is on screen).
+      function cameraIsCompactWidth(width) {
+        return width < CAMERA_COMPACT_W;
+      }
+      function cameraIsCompact(panel) {
+        return cameraIsCompactWidth(panel.offsetWidth || parseInt(panel.style.width, 10) || CAMERA_W);
+      }
+
+      // The parts that change look with the width ask to be told when the viewer crosses CAMERA_COMPACT_W: they listen to "camera-compact" on the panel.
+      function cameraWatchCompact(panel) {
+        if (typeof ResizeObserver !== "function" || typeof Event !== "function") return;
+        var last = cameraIsCompact(panel);
+        new ResizeObserver(function () {
+          var now = cameraIsCompact(panel);
+          if (now === last) return;
+          last = now;
+          panel.dispatchEvent(new Event("camera-compact"));
+        }).observe(panel);
       }
 
       // The "Retry" button, centered: it ONLY appears when the live video mode fails (the photo mode retries by itself on its next tick).
@@ -194,8 +229,8 @@
       // A size saved on a wide screen is brought inside a narrow window (a phone), or the "x" of the viewer ends up off screen.
       function cameraFitSize(size) {
         return {
-          w: Math.min(size.w, Math.max(CAMERA_MIN_W, window.innerWidth - 2 * MARGIN)),
-          h: Math.min(size.h, Math.max(CAMERA_MIN_H, window.innerHeight - 2 * MARGIN)),
+          w: Math.max(CAMERA_MIN_W, Math.min(size.w, window.innerWidth - 2 * MARGIN)), // a size saved before the limit existed is brought up to it
+          h: Math.max(CAMERA_MIN_H, Math.min(size.h, window.innerHeight - 2 * MARGIN)),
         };
       }
 

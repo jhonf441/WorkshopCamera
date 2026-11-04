@@ -106,17 +106,16 @@
       }
 
       // The section "Storage and system" as ONE card of the family (mockup 2026-11-01): what is used, the fields of the limits in two columns,
-      // the buttons, and the system relay as a subsection (o.relay(card)). The recording and the way the video is built are the form of the Live
+      // the buttons (the control of the system relay is in the service page and in the bar, not here). The recording and the way the video is built are the form of the Live
       // tab (cameraTlForm) and the Studio; nothing numbered, no card inside the card.
       // b = draft of the config (modified); cfg = what is saved on the Pi.
-      // o = {parent (where the card goes), rerender, save(b), undo(), usage: {videos_gb, free_gb, videos, captures}, relay(card)}
+      // o = {parent (where the card goes), rerender, save(b), undo(), usage: {videos_gb, free_gb, videos, captures}}
       function cameraSettingsComplete(b, cfg, o) {
         var card = studioCard(o.parent, "mdi-harddisk", i18nT('page.store_title'), i18nT('page.store_lead'));
         var u = o.usage || {};
         cameraStoreUsage(card, b, u);
         cameraStoreFields(card, b, u, o.rerender);
         cameraStoreActions(card, b, cfg, o);
-        if (o.relay) o.relay(card);
         return card;
       }
 

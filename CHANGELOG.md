@@ -1,5 +1,17 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.12.9 -- 2026-11-03
+
+- Sesion: tarjeta de aviso estandar tipo consola
+
+## 2.12.8 -- 2026-11-03
+
+- Sesion: el aviso tambien sale con un token caducado
+
+## 2.12.7 -- 2026-11-03
+
+- Sesion: un solo aviso para todo lo de sesion (parpadea, sin toast encima)
+
 ## 2.12.6 -- 2026-11-03
 
 - Camera: one honest state per image (fresh, waiting, stale, black, down), recovery help, viewer badge says live only with fresh frames

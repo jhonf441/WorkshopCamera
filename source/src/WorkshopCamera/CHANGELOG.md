@@ -1,5 +1,9 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.2 -- 2026-11-04
+
+- Rebuilt with the AWS-style session notice
+
 ## 2.13.1 -- 2026-11-04
 
 - The viewer cannot be made smaller than 190 x 120 px, and under 300 px wide the page button and the camera chips become icons / numbers

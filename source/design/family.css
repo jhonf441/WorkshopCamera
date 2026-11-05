@@ -25,29 +25,43 @@
 	--wf-err: #e53935;
 	--wf-info: #1e88e5;
 	--wf-armed: #ff8f00;
-	/* notices by cause (ESTANDAR 2.1): the border/icon color, the text and the background of each cause; ONE color per cause */
-	--wf-n-session: #1e88e5;
-	--wf-n-session-text: #90caf9;
-	--wf-n-session-bg: rgba(30, 136, 229, 0.1);
-	--wf-n-role: #90a4ae;
-	--wf-n-role-text: inherit;
-	--wf-n-role-bg: rgba(128, 128, 128, 0.08);
-	--wf-n-down: #fb8c00;
-	--wf-n-down-text: #ffcc80;
-	--wf-n-down-bg: rgba(251, 140, 0, 0.1);
-	--wf-n-error: #e53935;
-	--wf-n-error-text: #ef9a9a;
-	--wf-n-error-bg: rgba(229, 57, 53, 0.1);
+	/* semantic colors of every notice (ESTANDAR 2.1): ONE color per meaning; --wf-c-<meaning> (border, icon), -text, -bg.
+	   info = needs the person to sign in (blue); neutral = no permission for the role / nothing to say (gray); warning = waiting, locked, service down (orange);
+	   error = a real failure (red); success = done / all fine (green). Nothing is red while the session is still being resolved. */
+	--wf-c-info: #1e88e5;
+	--wf-c-info-text: #90caf9;
+	--wf-c-info-bg: rgba(30, 136, 229, 0.1);
+	--wf-c-neutral: #90a4ae;
+	--wf-c-neutral-text: inherit;
+	--wf-c-neutral-bg: rgba(128, 128, 128, 0.08);
+	--wf-c-warning: #fb8c00;
+	--wf-c-warning-text: #ffcc80;
+	--wf-c-warning-bg: rgba(251, 140, 0, 0.1);
+	--wf-c-error: #e53935;
+	--wf-c-error-text: #ef9a9a;
+	--wf-c-error-bg: rgba(229, 57, 53, 0.1);
+	--wf-c-success: #43a047;
+	--wf-c-success-text: #a5d6a7;
+	--wf-c-success-bg: rgba(67, 160, 71, 0.1);
+	--wf-n-session: var(--wf-c-info); --wf-n-session-text: var(--wf-c-info-text); --wf-n-session-bg: var(--wf-c-info-bg);
+	--wf-n-role: var(--wf-c-neutral); --wf-n-role-text: var(--wf-c-neutral-text); --wf-n-role-bg: var(--wf-c-neutral-bg);
+	--wf-n-down: var(--wf-c-warning); --wf-n-down-text: var(--wf-c-warning-text); --wf-n-down-bg: var(--wf-c-warning-bg);
+	--wf-n-error: var(--wf-c-error); --wf-n-error-text: var(--wf-c-error-text); --wf-n-error-bg: var(--wf-c-error-bg);
 }
 .theme--light.v-application, .theme--light .workshop-theme, .theme--light .wf-bar { --wf-surface: #fff; }
 .v-theme--light.v-application { --wf-surface: rgb(var(--v-theme-surface, 255, 255, 255)); }
 .v-theme--dark.v-application { --wf-surface: rgb(var(--v-theme-surface, 30, 30, 30)); }
 /* tokens of the light theme; html:has() reaches what hangs from <body> (toast, PIN dialog) */
 .theme--light.v-application, .theme--light .workshop-theme, .theme--light .wf-bar, .v-theme--light.v-application, html:has(.theme--light), html:has(.v-theme--light) {
-	--wf-n-session: #1565c0; --wf-n-session-text: #0d47a1; --wf-n-session-bg: rgba(21, 101, 192, 0.08);
-	--wf-n-role: #546e7a;
-	--wf-n-down: #e65100; --wf-n-down-text: #bf360c; --wf-n-down-bg: rgba(230, 81, 0, 0.08);
-	--wf-n-error: #c62828; --wf-n-error-text: #b71c1c; --wf-n-error-bg: rgba(198, 40, 40, 0.08);
+	--wf-c-info: #1565c0; --wf-c-info-text: #0d47a1; --wf-c-info-bg: rgba(21, 101, 192, 0.08);
+	--wf-c-neutral: #546e7a;
+	--wf-c-warning: #e65100; --wf-c-warning-text: #bf360c; --wf-c-warning-bg: rgba(230, 81, 0, 0.08);
+	--wf-c-error: #c62828; --wf-c-error-text: #b71c1c; --wf-c-error-bg: rgba(198, 40, 40, 0.08);
+	--wf-c-success: #2e7d32; --wf-c-success-text: #1b5e20; --wf-c-success-bg: rgba(46, 125, 50, 0.08);
+	--wf-n-session: var(--wf-c-info); --wf-n-session-text: var(--wf-c-info-text); --wf-n-session-bg: var(--wf-c-info-bg);
+	--wf-n-role: var(--wf-c-neutral); --wf-n-role-text: var(--wf-c-neutral-text); --wf-n-role-bg: var(--wf-c-neutral-bg);
+	--wf-n-down: var(--wf-c-warning); --wf-n-down-text: var(--wf-c-warning-text); --wf-n-down-bg: var(--wf-c-warning-bg);
+	--wf-n-error: var(--wf-c-error); --wf-n-error-text: var(--wf-c-error-text); --wf-n-error-bg: var(--wf-c-error-bg);
 }
 /* the color of the section in use: --wf-sec, else the --sec an older page still sets, else the color of the plugin */
 .workshop-theme, .wf-bar, .sidetabs, .wf-nav, .wf-tabs, .wf-card, .st-layout, .st-body, .workshop-theme .v-card { --wf-sec-now: var(--wf-sec, var(--sec, var(--wf-badge))); }
@@ -69,6 +83,7 @@
 .wf-state.warn::before, .wf-dot.warn { background: var(--wf-warn); }
 .wf-state.err::before, .wf-dot.err { background: var(--wf-err); }
 .wf-state.info::before, .wf-dot.info { background: var(--wf-info); }
+.wf-state.info { background-color: transparent !important; border-color: transparent !important; }
 .wf-pill { display: inline-flex; align-items: center; gap: 6px; padding: 1px 10px; border: 1px solid var(--wf-line); border-radius: 999px; font-size: 12px; font-weight: 500; opacity: 0.85; }
 .wf-bar .page-health { cursor: pointer; }
 /* old pages that still draw the bar as a v-card: the same look, so a page being migrated does not jump */
@@ -212,6 +227,8 @@
 .wf-notice--session, .wf-reason--session, .wf-cover--session, .wf-toast--session { --wf-n-c: var(--wf-n-session); --wf-n-t: var(--wf-n-session-text); --wf-n-bg: var(--wf-n-session-bg); }
 .wf-notice--role, .wf-reason--role, .wf-cover--role, .wf-toast--role { --wf-n-c: var(--wf-n-role); --wf-n-t: var(--wf-n-role-text); --wf-n-bg: var(--wf-n-role-bg); }
 .wf-notice--down, .wf-reason--down, .wf-cover--down, .wf-toast--down { --wf-n-c: var(--wf-n-down); --wf-n-t: var(--wf-n-down-text); --wf-n-bg: var(--wf-n-down-bg); }
+.wf-notice--resolving, .wf-reason--resolving, .wf-cover--resolving, .wf-toast--resolving { --wf-n-c: var(--wf-c-neutral); --wf-n-t: var(--wf-c-neutral-text); --wf-n-bg: var(--wf-c-neutral-bg); }
+.wf-notice--success, .wf-reason--success, .wf-cover--success, .wf-toast--success { --wf-n-c: var(--wf-c-success); --wf-n-t: var(--wf-c-success-text); --wf-n-bg: var(--wf-c-success-bg); }
 .wf-notice--error, .wf-reason--error, .wf-cover--error, .wf-toast--error { --wf-n-c: var(--wf-n-error); --wf-n-t: var(--wf-n-error-text); --wf-n-bg: var(--wf-n-error-bg); }
 /* N1 the session chip of the page bar */
 .wf-session-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--wf-n-session); border-radius: 14px; background: var(--wf-n-session-bg); color: var(--wf-n-session-text); font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1; cursor: pointer; }

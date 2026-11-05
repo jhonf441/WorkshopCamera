@@ -117,7 +117,9 @@
       function createCameraWidgets() {
         if (pluginStopped) return;
         if (document.getElementById(CAMERA_PANEL_ID)) return;
-        if (!cameraCanDo("view")) return; // a visitor without the camera: no panel (the launcher says why, 20-main.js)
+        if (typeof workshopIdentity === "function" && !workshopIdentity()) return; // unknown identity: nothing is built (09-camera-session.js)
+        if (!cameraCanDo("view")) { cameraSessionCoverRender(); return; } // no session / a role without the camera: the cover says why
+        var buildSeq = ++cameraSessionSeq;
 
         // The panel is created from the start (hidden if it was closed); the
         // camera (ESP32-camera, behind the 1-to-many relay on the Pi) is only
@@ -125,12 +127,17 @@
         // 2026-10-12: the address comes only from the own list
         // (cameras.json, 12-cameras.js), no longer from DWC's webcam.
         cameraLoadList().then(cameraStartupRelay).then(function (relay) {
+          if (buildSeq !== cameraSessionSeq) return; // the identity changed meanwhile: cameraRebuild builds again
           cameraAddressState = cameraStartupStateCameras(cameraList, relay);
           workshopNotify();
-          if (cameraAddressState === "missing") return; // no camera yet: no viewer (the page "Timelapses and captures" adds the first one)
+          var url = cameraUrlMain();
+          // no camera yet, the service does not answer ("na") or there is no address: no viewer, the cover says which (never a panel with an empty URL)
+          if (cameraAddressState === "missing" || cameraAddressState === "na" || !url) { cameraSessionCoverRender(); return; }
           if (pluginStopped) return;
           if (document.getElementById(CAMERA_PANEL_ID)) return;
-          buildCameraPanel(cameraUrlMain());
+          cameraSessionCoverOpen = false;
+          cameraSessionCoverRender();
+          buildCameraPanel(url);
           if (isCameraExpanded()) {
             cameraExpand();
           } else {
@@ -152,7 +159,7 @@
       }
 
       function cameraToggle() {
-        if (!cameraPanelEl) return; // no webcam configured: no panel
+        if (!cameraPanelEl) return cameraSessionToggleCover(); // no panel (09-camera-session.js): the cover tells why
         if (isCameraOpen()) cameraCollapse();
         else cameraExpand();
       }
@@ -168,7 +175,7 @@
       }
 
       function buildCameraPanel(url) {
-        if (document.getElementById(CAMERA_PANEL_ID)) return;
+        if (document.getElementById(CAMERA_PANEL_ID) || !url || !cameraCanDo("view")) return; // never an empty URL, never for a person who cannot see it
         var savedSize = cameraFitSize(loadSize(CAMERA_SIZE_KEY, CAMERA_W, CAMERA_H)); // a size saved on a wide screen must fit a phone
         var flashOn = false;
         // Photo mode (default) vs live video -- see button "modeBtn" further

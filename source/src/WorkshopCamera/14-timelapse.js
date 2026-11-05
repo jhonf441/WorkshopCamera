@@ -18,6 +18,19 @@
         });
       }
 
+      // The names of the cameras of `ids` that the relay says do not respond (the same judgement as everywhere: 14-health.js); a recording keeps going without them
+      function cameraTlDown(ids) {
+        return (ids || []).filter(function (id) { var h = typeof cameraStateOf === "function" ? cameraHealthFromRelay(cameraStateOf(id)) : null; return !!h && h.state === "down"; }).map(function (id) { return cameraTlNames([id])[0]; });
+      }
+
+      // A line in `box` naming the cameras of `ids` that do not respond (nothing when all answer). Returns the line (a loose one when there is none, so a caller can style it).
+      function cameraTlNoteDown(box, ids, key, css) {
+        var names = cameraTlDown(ids);
+        var line = cameraEl("div", css, names.length ? i18nT(key, { names: names.join(", ") }) : "");
+        if (names.length) box.appendChild(line);
+        return line;
+      }
+
       function cameraFmtDoes(s) {
         s = Math.max(0, Math.round(s || 0));
         return s >= 3600 ? Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min" : s >= 60 ? Math.floor(s / 60) + " min" : s + " s";
@@ -51,7 +64,7 @@
           var ended = armandoAntes && !tl.assembling;
           armandoAntes = tl.assembling;
           if (ended && alFinish) setTimeout(alFinish, 0);
-          var key = JSON.stringify([tl.recording, tl.assembling, tl.frames, tl.job, busy, notice, tl.scheduled]);
+          var key = JSON.stringify([tl.recording, tl.assembling, tl.frames, tl.job, busy, notice, tl.scheduled, cameraTlDown(tl.cameras)]);
           if (key === before) return;
           before = key;
           box.textContent = "";
@@ -67,7 +80,7 @@
             t2.appendChild(document.createTextNode(" "));
             t2.appendChild(cameraEl("span", null, i18nT('timelapse.frames')));
             t2.appendChild(document.createTextNode(" · " + cameraFmtDoes(tl.since_s) + " · " + cameraTlNames(tl.cameras).join(", ")));
-            g.appendChild(t2);
+            g.appendChild(t2); cameraTlNoteDown(g, tl.cameras, 'timelapse.recording_without_camera', "color:var(--c-notice,#ffb74d);");
             g.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", tl.manual ? i18nT('timelapse.started_by_hand_keeps_going_until') : i18nT('timelapse.from_the_current_job_it_ends')));
             if (tl.max_min) g.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);", i18nT('timelapse.stops_by_itself_after_max', { t: cameraFmtDoes(tl.max_min * 60) })));
             var bp = cameraBtn(busy ? i18nT('timelapse.stopping') : i18nT('timelapse.stop_and_build_the_video'), "background:#c62828;color:#fff;align-self:flex-start;", function () {
@@ -203,7 +216,7 @@
         var gridCams = cameraEl("div", "display:flex;flex-wrap:wrap;gap:6px;");
         cs.forEach(function (c) {
           var on = chosen.indexOf(c[0]) >= 0;
-          var chip = cameraBtn(c[1], on ? "background:#1976d2;color:#fff;border:1px solid #1976d2;" : "", function () {
+          var chip = cameraBtn((on ? String.fromCharCode(10003) + " " : "") + c[1], on ? "background:#1976d2;color:#fff;border:1px solid #1976d2;" : "", function () { // the check says which ones are chosen (the outline alone was too faint to tell)
             var i = chosen.indexOf(c[0]);
             if (i >= 0) {
               if (chosen.length > 1) chosen.splice(i, 1);
@@ -212,9 +225,9 @@
             t.camera = chosen[0];
             rerender();
           });
-          gridCams.appendChild(chip);
+          chip.setAttribute("aria-pressed", on ? "true" : "false"); gridCams.appendChild(chip);
         });
-        box.appendChild(gridCams);
+        box.appendChild(gridCams); cameraTlNoteDown(box, chosen, 'timelapse.chosen_camera_down', "").className = "ctl-alert amber";
 
         // -- photos: by time or one per layer (3D printing, only with jobs) --
         var selDisp = cameraEl("select", selCss);

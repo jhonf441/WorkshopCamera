@@ -32,6 +32,44 @@
         if (!puesta.mounted) { puesta.mounted = true; puesta.refresh(); }
       }
 
+      // The Keep box of the open item: it asks the service and says the result IN PLACE. Drawing the page again after it (the notice, the reload) restarted the
+      // video that was playing and put the old state back in the box (the item in hand was the old one). The item of the library is this very object, so
+      // the list is right when it is drawn again; the list is reloaded when the item is closed (onChanged marks it).
+      function cameraKeepHere(x, cc, hint, onChanged) {
+        var want = cc.checked;
+        cc.disabled = true;
+        cameraRelayKeep(x.file, want).then(function (d) {
+          cc.disabled = false;
+          if (d && d.ok === false) {
+            cc.checked = !want;
+            hint.textContent = i18nT('common.couldn_t_error', { error: d.error || "" });
+            return;
+          }
+          x.keep = want;
+          hint.textContent = i18nT(want ? 'gallery.kept_it_won_t_be_deleted' : 'gallery.no_longer_kept');
+          onChanged();
+        });
+      }
+
+      // Draws the page and puts the scroll back where it was: emptying the page makes the browser clamp the scroll to the top, and a list that was
+      // scrolled down jumped up on every redraw (Keep, rename, delete, the refresh of the state).
+      function cameraKeepScroll(draw) {
+        var y = window.pageYOffset || 0;
+        draw();
+        if (y && (window.pageYOffset || 0) !== y && window.scrollTo) window.scrollTo(0, y);
+      }
+
+      // The notice of the last action on the page (green or red), and the timer that takes it off by itself WITHOUT drawing the page again (a form may be open).
+      function cameraNoticeEl(page, ok, text) {
+        var el = page.appendChild(cameraEl("div", "color:" + (ok ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)") + ";", text));
+        el.className = "ctl-alert " + (ok ? "green" : "red");
+        return el;
+      }
+      function cameraNoticeExpire(timer, text, ok, drop) {
+        clearTimeout(timer);
+        return text ? setTimeout(drop, ok ? 6000 : 20000) : null;
+      }
+
       function cameraAssembleGallery(root) {
         if (!cameraCanDo("gallery")) return cameraGalleryDenied(root); // 13-service-views.js
         cameraTlCss();
@@ -48,7 +86,7 @@
         var viendo = null; // {kind, item}: the file open in the player of the library
         var sub = "all"; // second level tab of the library (18-page-library.js): all | video | photo | keep
         var multi = false; // "Choose several" of the library: tapping a card chooses it instead of opening it
-        var msg = "", msgOk = true;
+        var msg = "", msgOk = true, msgEl = null, msgTimer = null; // the notice of the last action: it goes by itself (a stale "Take started" stayed on screen after Stop)
         var timer = null, puesta = cameraStartupCreate(); // puesta: start-up chip in the header, see cameraGalStartupAssemble
         // Tabs (18-page-tabs.js): the saved one if this view may use it
         var pestana = cameraGalleryTab(CAMERA_PAGE_TAB_KEY); // 13-service-views.js (an id of the 7 tabs of before is moved to its section)
@@ -76,10 +114,10 @@
             return tls === null && caps === null ? cameraNoCameraProbe() : false;
           }).then(function (none) { noCam = !!none; render(); });
         }
-        function notice(t, ok) {
+        function notice(t, ok, quiet) { // quiet: do not draw the page now (a load that draws it follows): one redraw, not two
           msg = t || "";
-          msgOk = ok !== false;
-          render();
+          msgOk = ok !== false; msgTimer = cameraNoticeExpire(msgTimer, msg, msgOk, function () { msg = ""; if (msgEl && msgEl.parentNode) msgEl.parentNode.removeChild(msgEl); msgEl = null; });
+          if (!quiet) render();
         }
         function nameOf(x) {
           return x.name || x.job || x.file;
@@ -101,13 +139,13 @@
           p.then(function () {
             sel = {};
             if (viendo && items.indexOf(viendo.item.file) >= 0) viendo = null;
-            notice(i18nT('gallery.deleted_n', { n: items.length }));
+            notice(i18nT('gallery.deleted_n', { n: items.length }), true, true);
             load();
           });
         }
         function rename(item, n) {
           cameraRelayRename(item.file, n).then(function (d) {
-            notice(d.ok ? i18nT('gallery.name_changed') : i18nT('common.couldn_t_error', { error: d.error || "" }), d.ok);
+            notice(d.ok ? i18nT('gallery.name_changed') : i18nT('common.couldn_t_error', { error: d.error || "" }), d.ok, true);
             load();
           });
         }
@@ -118,7 +156,7 @@
             p = p.then(function () { return cameraRelayKeep(a, value); });
           });
           p.then(function () {
-            notice(value ? (items.length > 1 ? i18nT('gallery.kept_n', { n: items.length }) : i18nT('gallery.kept_it_won_t_be_deleted')) : i18nT('gallery.no_longer_kept'));
+            notice(value ? (items.length > 1 ? i18nT('gallery.kept_n', { n: items.length }) : i18nT('gallery.kept_it_won_t_be_deleted')) : i18nT('gallery.no_longer_kept'), true, true);
             load();
           });
         }
@@ -161,9 +199,9 @@
         }
         var navPlegada = false, navFija = cameraNavPinGet(); // the bar folds to its icons after a choice unless it is pinned
         var tabs = null;
-        function render() {
-          cameraViewTeardown(page); // the previous tab: its pictures, boxes and timers go before it is drawn again
-          page.textContent = "";
+        function render() { cameraKeepScroll(renderPage); } // the page keeps its scroll when it is drawn again (it jumped to the top after Keep)
+        function renderPage() {
+          cameraViewTeardown(page); page.textContent = ""; // the previous tab: its pictures, boxes and timers go before it is drawn again
           var t = est && est.timelapse;
           // the page bar of the family (wf-bar): badge with the icon of the menu, title, one line that says what the page is for, and on the
           // right the state chips, the start-up chip and the refresh button
@@ -206,7 +244,7 @@
           // banners and messages like a dense text v-alert (.ctl-alert)
           if (t && t.recording && pestana !== "live") page.appendChild(cameraEl("div", "", i18nT('gallery.recording_now', { job: t.job || "", n: t.frames || 0 }))).className = "ctl-alert red";
           if (t && (t.assembling || t.editing)) page.appendChild(cameraEl("div", "", i18nT('gallery.the_system_is_building_a_video'))).className = "ctl-alert blue";
-          if (msg) page.appendChild(cameraEl("div", "color:" + (msgOk ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)") + ";", msg)).className = "ctl-alert " + (msgOk ? "green" : "red");
+          msgEl = msg ? cameraNoticeEl(page, msgOk, msg) : null;
           if (pb && pb.items && pb.items.length) page.appendChild(noticeByDelete());
           if (pestana === "live") return cameraLiveTab(page, ctx()); // 18-page-live.js
           if (pestana === "store" && cameraCanDo("settings")) return renderSettings();
@@ -386,7 +424,7 @@
           var acc = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
           acc.appendChild(boton(i18nT('common.download'), "background:#1976d2;color:#fff;", function () { download(kind, x.file); }));
           acc.appendChild(cameraBtnDouble(i18nT('common.delete'), i18nT('common.delete_confirm'), "", function () { deleteSeveral([x.file]); }));
-          acc.appendChild(boton(i18nT('common.close'), "", function () { viendo = null; render(); }));
+          acc.appendChild(boton(i18nT('common.close'), "", function () { var s = viendo && viendo.stale; viendo = null; render(); if (s) load(); })); // Keep changed the item: reload the list once it is closed
           der.appendChild(acc);
           // keep: it is never deleted by itself because of the caps
           var lc = cameraEl("label", "display:flex;align-items:center;gap:8px;cursor:pointer;");
@@ -394,9 +432,9 @@
           cc.type = "checkbox";
           cc.checked = !!x.keep;
           cc.style.cssText = "width:18px;height:18px;";
-          cc.addEventListener("change", function () { keep([x.file], cc.checked); });
+          cc.addEventListener("change", function () { cameraKeepHere(x, cc, keepHint, function () { if (viendo) viendo.stale = true; }); }); // in place: no redraw (the video kept restarting)
           lc.appendChild(cc);
-          lc.appendChild(document.createTextNode(i18nT('gallery.keep_not_deleted_automatically')));
+          lc.appendChild(document.createTextNode(i18nT('gallery.keep_not_deleted_automatically'))); var keepHint = cameraEl("span", "color:var(--c-sec,#b0bec5);font-size:12px;", ""); lc.appendChild(keepHint);
           der.appendChild(lc);
           if (x.pending_delete_until) der.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);", i18nT('gallery.deleted_by_itself_on_unless_kept', { date: cameraDate(x.pending_delete_until) })));
           // rename in place (without prompt(): in the kiosk the native boxes misbehave)
@@ -471,21 +509,29 @@
       function cameraGalleryFailed(page, why) {
         var cause = why.cause || "unreachable";
         var refused = cause === "login_required" || cause === "forbidden";
-        page.appendChild(cameraEl("div", refused ? "color:var(--c-amber,#ffe082);" : "color:var(--c-error,#ef9a9a);", cameraRelayCauseNow(cause, why.status)));
-        if (cause === "login_required" && cameraSignedOut() && typeof workshopLogin === "function") {
-          page.appendChild(cameraBtn(workshopApiT("signInAction"), "background:#1976d2;color:#fff;margin-top:8px;", function () { workshopLogin(); }));
-        }
+        // N2: a refusal is a calm note by cause (session / role), a real failure is the error one; no second sign-in call (the chip has it)
+        var kind = refused ? (cameraSignedOut() ? "session" : "role") : "error";
+        page.appendChild(workshopNoticeEl(kind, "section", { text: cameraRelayCauseNow(cause, why.status), needed: "operator" }));
       }
 
       // The person signed in or out (or changed role): what the relay refused is read again now, not at the next refresh. Returns the way to stop listening.
       function cameraGalleryOnIdentity(page, reread) {
-        return typeof workshopOnIdentity === "function" ? workshopOnIdentity(function () { if (page.isConnected) reread(); }) : null;
+        // 09-session-change.js: signing out (or a role without the gallery) empties the page and says why (N4); otherwise it is read again now
+        return typeof workshopOnSessionChange === "function" ? workshopOnSessionChange(function () {
+          if (!page.isConnected) return;
+          if (!cameraCanDo("gallery")) {
+            page.textContent = "";
+            page.appendChild(cameraGalleryDeniedBox());
+            return;
+          }
+          reread();
+        }) : null;
       }
 
       // Asks the relay's state every 3 s while the page is open (not while the tab is hidden); onState(state) gets each answer. Returns the timer.
       function cameraGalleryPoll(onState) {
         return setInterval(function () {
-          if (document.hidden) return;
+          if (document.hidden || !cameraCanDo("gallery")) return;
           cameraStateRead().then(onState);
         }, 3000);
       }

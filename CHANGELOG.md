@@ -1,5 +1,33 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.15 -- 2026-11-05
+
+- Camera: All cameras grid reworked (aligned tiles, per-camera photo/video, draggable in place)
+
+## 2.13.14 -- 2026-11-05
+
+- Camera: all cameras at once in the Live tab, draggable tiles
+
+## 2.13.13 -- 2026-11-05
+
+- Camera: Keep in the open item in place
+
+## 2.13.12 -- 2026-11-05
+
+- Camera: no flash on redraw, Library keeps scroll, photo/video control in Live
+
+## 2.13.11 -- 2026-11-05
+
+- Session state, refusals and notices unified; errors kept as objects; 403 names the action
+
+## 2.13.10 -- 2026-11-05
+
+- Camera: Live recording fixes (form in view, notice expires, chosen cameras marked, dead camera named, no black flash)
+
+## 2.13.9 -- 2026-11-05
+
+- Session notices and help standard: one voice for sign-in and role refusals, shared help tips, identity change resets what the session showed
+
 ## 2.13.8 -- 2026-11-05
 
 - Camera: viewer reads relay state in photo mode too; page button shows/closes the open viewer

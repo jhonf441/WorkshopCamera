@@ -21,7 +21,7 @@
         st.id = "workshop-tl-css";
         workshopInjectFamily(); // the design family (wf-* classes), once per page
         st.textContent = workshopCss([
-          ".ctl{--c-card:#263238;--c-interna:rgba(0,0,0,0.18);--c-edge:rgba(255,255,255,0.12);--c-text:#eceff1;--c-sec:#b0bec5;--c-field:#1e272c;--c-field-edge:rgba(255,255,255,0.3);--c-btn-edge:rgba(255,255,255,0.23);--c-neutro:#37474f;--c-blue:#90caf9;--c-green:#a5d6a7;--c-amber:#ffe082;--c-notice:#ffb74d;--c-error:#ef9a9a;--c-tab:rgba(255,255,255,0.6);color:var(--c-text);font-size:12px;}",
+          ".ctl{--c-card:#263238;--c-interna:rgba(0,0,0,0.18);--c-edge:rgba(255,255,255,0.12);--c-text:#eceff1;--c-sec:var(--wf-n-role-text,#b0bec5);--c-field:#1e272c;--c-field-edge:rgba(255,255,255,0.3);--c-btn-edge:rgba(255,255,255,0.23);--c-neutro:#37474f;--c-blue:var(--wf-n-session-text,#90caf9);--c-green:#a5d6a7;--c-amber:var(--wf-n-down-text,#ffe082);--c-notice:var(--wf-n-down-text,#ffb74d);--c-error:#ef9a9a;--c-tab:rgba(255,255,255,0.6);color:var(--c-text);font-size:12px;}",
           ".theme--light .ctl{--c-card:#ffffff;--c-interna:#f5f7f8;--c-edge:rgba(0,0,0,0.12);--c-text:#212121;--c-sec:#616161;--c-field:#ffffff;--c-field-edge:rgba(0,0,0,0.23);--c-btn-edge:rgba(0,0,0,0.23);--c-neutro:#eceff1;--c-blue:#1565c0;--c-green:#2e7d32;--c-amber:#8d6e00;--c-notice:#b26a00;--c-error:#c62828;--c-tab:rgba(0,0,0,0.54);}",
           // ---- the design family (src/_shared/05-family-css.js) draws the bar, the menu, the cards, the buttons and the states (wf-*);
           // below only the layout of the page and the content that is the Camera's own ----
@@ -122,7 +122,9 @@
       // "Free on the system: X GB" with a thin grey bar (what the videos take of the limit chosen for them) and the line of what is stored.
       function cameraStoreUsage(card, b, u) {
         var row = cameraEl("div", "display:flex;justify-content:space-between;gap:10px;font-size:13px;");
-        row.appendChild(cameraEl("span", "opacity:.7;", i18nT('tlSettings.free_on_the_system')));
+        var rowLabel = cameraEl("span", "opacity:.7;display:inline-flex;align-items:center;gap:4px;", i18nT('tlSettings.free_on_the_system'));
+        rowLabel.appendChild(workshopHelpTipOf("camera_store"));
+        row.appendChild(rowLabel);
         row.appendChild(cameraEl("b", null, u.free_gb != null ? u.free_gb + " GB" : "?"));
         card.appendChild(row);
         var cap = b.timelapses_gb || 5;

@@ -116,6 +116,22 @@
         return btn;
       }
 
+      // The spec of a tip from the catalog block "helpTips" of the plugin: helpTips.<id>_title / _what / _why / _missing / _how (es and en, same keys).
+      // The four rows of HelpTip.vue; a row without text is not drawn. id is a literal (tests/help-tip-js.test.js checks every id used has its five keys).
+      function workshopHelpSpecOf(id) {
+        var k = function (part) {
+          var key = "helpTips." + id + "_" + part;
+          var v = i18nT(key);
+          return v === key ? "" : v;
+        };
+        return { title: k("title"), what: k("what"), why: k("why"), ifMissing: k("missing"), how: k("how") };
+      }
+
+      // The "?" of a thing of the catalog (workshopHelpTipEl(workshopHelpSpecOf(id)))
+      function workshopHelpTipOf(id) {
+        return workshopHelpTipEl(workshopHelpSpecOf(id));
+      }
+
       // A field whose label is OUTSIDE the control; the "?" sits next to the label, never inside the control (AYUDAS.md 3, 4)
       function workshopFieldEl(label, helpSpec, control, id) {
         workshopHelpCss();

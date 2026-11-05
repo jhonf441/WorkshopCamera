@@ -29,6 +29,19 @@
           ".cst-val{min-width:54px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;}",
           ".cst-pre{width:100%;aspect-ratio:16/9;object-fit:contain;background:#000;border-radius:4px;display:block;}",
           ".cst-chips{display:flex;flex-wrap:wrap;gap:6px;}",
+          // "All" of the Live tab: a tile per camera in a grid, with a handle to drag it (pointer events: mouse and finger)
+          ".cst-multi{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start;}", // start: a tile is as tall as its own content, never stretched to the tallest one
+          ".cst-tile{min-width:0;padding:8px;border:1px solid var(--c-btn-edge,rgba(128,128,128,0.4));border-radius:8px;transition:box-shadow 0.15s ease;}",
+          ".cst-tile.over{outline:2px dashed var(--wf-accent,#1976d2);outline-offset:2px;}", // where it will land
+          ".cst-tile.drag{position:relative;z-index:5;box-shadow:0 10px 28px rgba(0,0,0,0.5);opacity:0.92;pointer-events:none;cursor:grabbing;}", // lifted, follows the pointer, ignores it (so the tile under it is found)
+          ".cst-tile-head{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-weight:600;}",
+          ".cst-tile-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
+          ".cst-modes{display:inline-flex;gap:2px;}",
+          ".cst-mode{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:inherit;font-size:18px;cursor:pointer;opacity:0.65;}",
+          ".cst-mode.on{opacity:1;border-color:var(--wf-accent,#1976d2);background:rgba(25,118,210,0.18);}",
+          ".cst-multi .cst-pre{width:100%;aspect-ratio:4/3;object-fit:contain;background:#000;border-radius:6px;display:block;}", // every picture the same shape: no thin strips
+          ".cst-handle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:-2px;border-radius:6px;cursor:grab;touch-action:none;user-select:none;font-size:20px;}",
+          ".cst-handle:hover{background:rgba(128,128,128,0.2);}",
           ".cst-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--c-btn-edge);background:transparent;color:var(--c-text);font:inherit;font-size:12px;cursor:pointer;}",
           ".cst-chip.on{border-color:#1976d2;background:transparent;font-weight:600;}",
           ".cst-chip .mdi{font-size:16px;color:var(--wf-icon,rgba(128,128,128,0.95));}",

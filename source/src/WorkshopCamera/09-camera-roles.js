@@ -52,16 +52,22 @@
         return t("roles.resting");
       }
 
+      // The catalog key of a signed-out sentence: the plugin's own for a plain "signed out", the shared one for an expired session or a locked PIN
+      function cameraSessionKeyOf(state, base) {
+        return typeof workshopNoticeSessionKey === "function" ? workshopNoticeSessionKey(state, base) : base;
+      }
+
       // Why the camera is not shown, in words: "signed_out" (signing in may fix it) or "role" (only another role does; the text names the role).
       // signedOut: the person has no session; roleLabel: the name of their role ("Visitor"). t = i18nT.
-      function cameraDeniedText(signedOut, roleLabel, t) {
-        return signedOut ? t("roles.signed_out_camera") : t("roles.no_permission", { role: roleLabel || "" });
+      // state: the session state (expired and a locked PIN have their own shared sentence, see workshopNoticeSessionKey)
+      function cameraDeniedText(signedOut, roleLabel, t, state) {
+        return signedOut ? t(cameraSessionKeyOf(state, "roles.signed_out_camera")) : t("roles.no_permission", { role: roleLabel || "" });
       }
 
       // The same sentence for the refusal of a call to the relay (port 8090): cause = "login_required" | "forbidden" | "unreachable" | "error".
       // "unreachable" is only a network failure; a refusal is never told as a relay that is down.
-      function cameraRelayCauseText(cause, status, signedOut, roleLabel, t) {
-        if (cause === "login_required") return signedOut ? t("roles.signed_out_files") : t("relay.error_sign_in");
+      function cameraRelayCauseText(cause, status, signedOut, roleLabel, t, state) {
+        if (cause === "login_required") return signedOut ? t(cameraSessionKeyOf(state, "roles.signed_out_files")) : t("relay.error_sign_in");
         if (cause === "forbidden") return t("roles.no_permission_files", { role: roleLabel || "" });
         if (cause === "error") return t("relay.error_http", { status: status });
         return t("gallery.could_not_read_the_system_relay");
@@ -81,6 +87,10 @@
         return typeof workshopSignedOut === "function" && workshopSignedOut();
       }
 
+      function cameraStateNow() {
+        return typeof workshopSessionState === "function" ? workshopSessionState() : "";
+      }
+
       // The name of the role of the person in the language of the page ("Visitor" for nobody).
       function cameraRoleLabel() {
         var role = typeof workshopRole === "function" ? workshopRole() : "";
@@ -89,12 +99,12 @@
 
       // The sentence of a camera that cannot be shown to this person (signed out or role).
       function cameraDenied() {
-        return cameraDeniedText(cameraSignedOut(), cameraRoleLabel(), i18nT);
+        return cameraDeniedText(cameraSignedOut(), cameraRoleLabel(), i18nT, cameraStateNow());
       }
 
       // The same sentence for a failed call to the relay.
       function cameraRelayCauseNow(cause, status) {
-        return cameraRelayCauseText(cause, status, cameraSignedOut(), cameraRoleLabel(), i18nT);
+        return cameraRelayCauseText(cause, status, cameraSignedOut(), cameraRoleLabel(), i18nT, cameraStateNow());
       }
 
       // The text under a warning of the contract, or "" when all is well (or nothing is known yet).
@@ -119,25 +129,9 @@
         workshopOnStop(off);
       }
 
-      // The person logged in or out: a viewer without the camera loses the panel, and gets it back when the view allows it again.
-      function cameraOnIdentity() {
-        if (pluginStopped) return;
-        if (!cameraCanDo("view")) {
-          cameraRemovePanel();
-          workshopNotify();
-        } else if (!cameraPanelEl) {
-          createCameraWidgets();
-        }
-      }
-
       function cameraRemovePanel() {
         if (cameraStopStreamFn) cameraStopStreamFn();
         var panel = document.getElementById(CAMERA_PANEL_ID);
         if (panel) panel.remove();
         cameraPanelEl = null;
-      }
-
-      function cameraWatchIdentity() {
-        if (typeof workshopOnIdentity !== "function") return;
-        workshopOnStop(workshopOnIdentity(cameraOnIdentity));
       }

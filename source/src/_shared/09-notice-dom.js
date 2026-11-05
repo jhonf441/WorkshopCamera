@@ -15,10 +15,14 @@
         down: "mdi-power-plug-off-outline",
         error: "mdi-alert-circle-outline",
         empty: "mdi-information-outline",
+        resolving: "mdi-timer-sand",
       };
+      // ONE color per meaning (family.css --wf-c-<color>): sign in = info (blue), no permission = neutral (gray), wait / service down = warning, failure = error
+      var WORKSHOP_NOTICE_COLORS = { session: "info", role: "neutral", down: "warning", error: "error", empty: "neutral", resolving: "neutral" };
 
       function workshopNoticeKindOf(o) {
         o = o || {};
+        if (o.state === "resolving" || o.reason === "resolving") return "resolving"; // never red, never an alarm: the session is being checked
         if (o.reason === "signed_out") return "session";
         if (o.reason === "role") return "role";
         if (o.serviceDown) return "down";
@@ -31,14 +35,42 @@
         return i18nT(known[role] || known.viewer);
       }
 
-      function workshopNoticeText(kind, needed) {
-        if (kind === "session") return i18nT("notice.notice_session_reason");
+      // Pure: the catalog key of the sentence for a signed-out person, by state (the same ones as SessionNotice.vue)
+      // base: a more specific sentence of a plugin for the plain "signed out" state ("Requires signing in to see the camera"); expired and locked keep the shared ones
+      function workshopNoticeSessionKey(state, base) {
+        if (state === "expired") return "notice.notice_session_expired";
+        if (state === "pin-locked") return "notice.notice_pin_locked";
+        return base || "notice.notice_session_reason";
+      }
+
+      // The sentence of a signed-out person for a plugin that names what needs the session: the state decides, the plugin only names the thing
+      function workshopSessionSentence(base, params) {
+        var state = typeof workshopSessionState === "function" ? workshopSessionState() : "";
+        return i18nT(workshopNoticeSessionKey(state, base), params);
+      }
+
+      // The current state, as one short key for the elements that repaint only when it changes
+      function workshopNoticeStamp() {
+        var state = typeof workshopSessionState === "function" ? workshopSessionState() : "";
+        return state + "|" + (typeof workshopRole === "function" ? workshopRole() : "");
+      }
+
+      // state (optional): a state already read; default = the state of the session now
+      function workshopNoticeText(kind, needed, state) {
+        state = state || (typeof workshopSessionState === "function" ? workshopSessionState() : "");
+        if (kind === "resolving") return i18nT("notice.notice_resolving");
+        if (kind === "session") return i18nT(workshopNoticeSessionKey(state));
         if (kind === "role") {
           var mine = typeof workshopRole === "function" ? workshopRole() : "";
           return i18nT("notice.notice_role_reason", { needed: workshopNoticeRoleName(needed || "technician"), role: workshopNoticeRoleName(mine) });
         }
         if (kind === "down") return i18nT("notice.notice_down_reason");
         return "";
+      }
+
+      // "Read only" note of a role that may look but not change (same sentence as shared.read_only_note of the Vue side)
+      function workshopReadOnlyText() {
+        return i18nT("notice.read_only_note");
       }
 
       function workshopNoticeDomEl(tag, cls, text) {
@@ -112,8 +144,8 @@
       }
 
       function workshopLockReasonEl(op, need, ctx) {
-        var reason = typeof workshopAccessReason === "function" ? workshopAccessReason(op, ctx) : "";
-        var kind = workshopNoticeKindOf({ reason: reason });
+        var access = typeof workshopAccessState === "function" ? workshopAccessState(op, ctx) : "ok";
+        var kind = access === "resolving" ? "resolving" : workshopNoticeKindOf({ reason: access === "session" ? "signed_out" : access === "role" ? "role" : "" });
         if (!kind) return null;
         return workshopReasonEl(kind, workshopNoticeText(kind, need));
       }

@@ -394,6 +394,7 @@
           cameraTlStudio.pending = null;
         }
         if (typeof cameraFocusCurrent !== "undefined" && cameraFocusCurrent && (!root || (root.contains && root.contains(cameraFocusCurrent.img)))) cameraFocusRelease();
+        if (typeof cameraFocusTiles !== "undefined" && cameraFocusTiles.length) cameraFocusRelease(); // the tiles of the grid of all the cameras
         if (typeof cameraHealthRelease === "function") cameraHealthRelease(root || null); // 14-health.js: the judgement of the pictures of the view
         workshopCoverRelease(root || null); // 26-camera-cover.js
       }

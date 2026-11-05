@@ -17,7 +17,7 @@
           var denied = !cameraCanDo("view"); // a visitor without the camera: a clear message instead of an error (F3-C)
           return {
             open: open,
-            disabled: noPanel,
+            disabled: noPanel && !cameraSessionCause().kind, // with a cause the tile opens the cover that tells it
             statusText: denied
               ? cameraDenied()
               : noPanel
@@ -34,13 +34,15 @@
         },
       };
       workshopRegisterPanel("camera", CAMERA_PANEL);
-      cameraWatchIdentity(); // 09-camera-roles.js: the panel appears or goes away when the person logs in or out
+      cameraWatchSession(); // 09-camera-session.js: every change of identity drops what the other person read and builds again
 
       // Without a sidebar installed, the camera shows its own floating button.
       workshopFallbackLauncher("camera", CAMERA_PANEL);
 
       cameraRegisterGallery(); // Plugins > Timelapses and captures (17-gallery.js): before the viewer, whose button to the page needs it registered
-      workshopWhenReady(createCameraWidgets);
+      workshopWhenReady(function () {
+        workshopWhenIdentityKnown(createCameraWidgets); // never from an unknown identity (it counts as "full")
+      });
       workshopWatchDom(function () {
         if (cameraPanelEl && !document.getElementById(CAMERA_PANEL_ID)) {
           cameraPanelEl = null;

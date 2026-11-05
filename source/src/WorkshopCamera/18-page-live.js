@@ -103,7 +103,7 @@
         if (cameraCanDo("timelapse")) {
           if (tech && !recording && c.cfg && c.draft) {
             if (!live.when) live.when = (c.cfg.timelapse || {}).active ? "job" : "now";
-            col.appendChild(cameraBtn(i18nT('live.record_timelapse') + "...", "min-height:44px;", function () { live.open = !live.open; c.rerender(); }));
+            col.appendChild(cameraBtn(i18nT('live.record_timelapse') + "...", "min-height:44px;", function () { live.open = !live.open; live.reveal = live.open; c.rerender(); })); // reveal: the form opens under the picture, out of sight: bring it into view once it is drawn
           }
           col.appendChild(cameraTlBox(function () { c.reload(); }, { noStart: tech })); // the state, Stop and build, the schedule; the operator also starts here
         }
@@ -122,6 +122,7 @@
             goStudio: function () { c.go("studio"); },
           }));
           page.appendChild(fc);
+          if (live.reveal) { live.reveal = false; setTimeout(function () { if (fc.scrollIntoView) fc.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 0); }
         }
         if (tech) {
           var how = cameraEl("details", "margin-top:12px;");
@@ -168,43 +169,176 @@
         return cameraList.filter(function (x) { return x.id === id; })[0] || cameraChosen();
       }
 
+      // ---- "All" in the Live tab: every camera at once, INSIDE the page (not a floating window), each tile with a handle to drag it to another place ----
+      var CAMERA_LIVE_ORDER_KEY = "workshopCameraLiveOrder"; // localStorage: the ids of the cameras in the order the person put them
+
+      // The cameras in the saved order (the ones the order does not know go last, in their own order).
+      function cameraLiveOrdered(list) {
+        var saved = [];
+        try { saved = JSON.parse(localStorage.getItem(CAMERA_LIVE_ORDER_KEY) || "[]"); } catch (e) { saved = []; }
+        if (!Array.isArray(saved)) saved = [];
+        var rank = function (c) { var i = saved.indexOf(c.id); return i < 0 ? saved.length + list.indexOf(c) : i; };
+        return list.slice().sort(function (a, b) { return rank(a) - rank(b); });
+      }
+
+      // Pointer events (mouse and finger): a press on a .cst-handle picks up its .cst-tile, which FOLLOWS the pointer (lifted, with a shadow) while the tile
+      // under it is marked; released over a tile, the dragged one takes its slot and the tiles are moved IN PLACE (no redraw: nothing reloads, no flash).
+      // Released over nothing, the tile slides back. onDone(ids) gets the new order of data-cam ids.
+      function cameraLiveDrag(grid, onDone) {
+        grid.addEventListener("pointerdown", function (ev) {
+          var h = ev.target && ev.target.closest ? ev.target.closest(".cst-handle") : null;
+          var tile = h && h.closest(".cst-tile");
+          if (!tile) return;
+          ev.preventDefault();
+          var x0 = ev.clientX, y0 = ev.clientY;
+          tile.classList.add("drag");
+          tile.style.transition = "none";
+          var over = null;
+          var move = function (e) {
+            tile.style.transform = "translate(" + (e.clientX - x0) + "px," + (e.clientY - y0) + "px)";
+            var el = document.elementFromPoint(e.clientX, e.clientY); // the lifted tile ignores the pointer (CSS), so this is what is under it
+            var t = el && el.closest ? el.closest(".cst-tile") : null;
+            if (over) over.classList.remove("over");
+            over = t && t !== tile && grid.contains(t) ? t : null;
+            if (over) over.classList.add("over");
+          };
+          var up = function () {
+            grid.removeEventListener("pointermove", move);
+            grid.removeEventListener("pointerup", up);
+            grid.removeEventListener("pointercancel", up);
+            tile.classList.remove("drag");
+            tile.style.transition = "transform 0.15s ease";
+            tile.style.transform = "";
+            if (!over) return;
+            over.classList.remove("over");
+            var kids = [].slice.call(grid.children);
+            var from = kids.indexOf(tile), to = kids.indexOf(over);
+            grid.insertBefore(tile, from < to ? over.nextSibling : over); // the dragged tile takes the slot of the one it was released over
+            onDone([].map.call(grid.children, function (t) { return t.getAttribute("data-cam"); }));
+          };
+          if (grid.setPointerCapture) { try { grid.setPointerCapture(ev.pointerId); } catch (e) { /* a pointer that is gone */ } }
+          grid.addEventListener("pointermove", move);
+          grid.addEventListener("pointerup", up);
+          grid.addEventListener("pointercancel", up);
+        });
+      }
+
+      // The grid: a tile per camera (handle, name, ITS OWN mode buttons, its picture). Changing the mode of a tile draws only that tile again.
+      function cameraLiveMulti(box, c) {
+        var grid = cameraEl("div", "");
+        grid.className = "cst-multi";
+        cameraLiveOrdered(cameraList).forEach(function (cam) {
+          var tile = cameraEl("div", "");
+          tile.className = "cst-tile";
+          tile.setAttribute("data-cam", cam.id);
+          var head = cameraEl("div", "");
+          head.className = "cst-tile-head";
+          var handle = cameraEl("span", "");
+          handle.className = "cst-handle mdi mdi-drag";
+          handle.title = i18nT('live.drag_to_move');
+          head.appendChild(handle);
+          head.appendChild(cameraEl("span", null, cam.name)).className = "cst-tile-name";
+          var modes = cameraEl("span", "");
+          head.appendChild(modes);
+          tile.appendChild(head);
+          var holder = cameraEl("div", "");
+          tile.appendChild(holder);
+          grid.appendChild(tile);
+          var F = null, seq = 0;
+          var show = function () { // this tile's picture in ITS mode: a photo every 3 s or the live video
+            var mine = ++seq;
+            cameraFocusDrop(F);
+            F = null;
+            holder.textContent = "";
+            cameraUrls(cam).then(function (u) { if (mine === seq && holder.isConnected) F = cameraFocusPreview(holder, cam, cameraLiveUrls(cam, u), { go: c.go, tile: true }); });
+          };
+          var paintModes = function () { modes.textContent = ""; modes.appendChild(cameraLiveModes(cam, function () { paintModes(); show(); }, true)); };
+          paintModes();
+          show();
+        });
+        cameraLiveDrag(grid, function (ids) { try { localStorage.setItem(CAMERA_LIVE_ORDER_KEY, JSON.stringify(ids)); } catch (e) { /* it still moves for this session */ } });
+        box.appendChild(grid);
+        box.appendChild(cameraEl("div", null, i18nT('live.multi_hint'))).className = "ctl-muted";
+      }
+
+      // What each camera shows: a photo every 3 s (light, the default) or its live video through the relay (it streams only while a picture shows it). It is
+      // chosen PER CAMERA and kept in the browser. The video is the same preview with the addresses of a camera that has no still image: the preview
+      // already shows those as video.
+      var CAMERA_LIVE_MODES_KEY = "workshopCameraLiveModes";
+      var cameraLiveModesNow = null; // { camera id: "photo" | "video" }
+      function cameraLiveModeOf(id) {
+        if (!cameraLiveModesNow) {
+          try { cameraLiveModesNow = JSON.parse(localStorage.getItem(CAMERA_LIVE_MODES_KEY) || "{}") || {}; } catch (e) { cameraLiveModesNow = {}; }
+        }
+        return cameraLiveModesNow[id] === "video" ? "video" : "photo";
+      }
+      function cameraLiveModeSet(id, mode) {
+        cameraLiveModeOf(id);
+        cameraLiveModesNow[id] = mode;
+        try { localStorage.setItem(CAMERA_LIVE_MODES_KEY, JSON.stringify(cameraLiveModesNow)); } catch (e) { /* it still changes for this session */ }
+      }
+      function cameraLiveUrls(cam, u) {
+        return cameraLiveModeOf(cam.id) === "video" && u.video ? { photo: "", video: u.video } : u;
+      }
+      // The two buttons of a camera. compact = the icons in the header of a tile; else the chips under the camera chips. onPick(mode) after the change.
+      function cameraLiveModes(cam, onPick, compact) {
+        var row = cameraEl("span", "");
+        row.className = compact ? "cst-modes" : "cst-chips";
+        ["photo", "video"].forEach(function (m) {
+          var on = cameraLiveModeOf(cam.id) === m;
+          var label = m === "video" ? i18nT('live.mode_video') : i18nT('live.mode_photo');
+          var b = cameraEl("button", null, compact ? "" : label);
+          b.type = "button";
+          b.className = (compact ? "cst-mode mdi " + (m === "video" ? "mdi-video-outline" : "mdi-image-outline") : "cst-chip") + (on ? " on" : "");
+          b.title = label;
+          b.setAttribute("aria-label", label);
+          b.setAttribute("aria-pressed", on ? "true" : "false");
+          b.addEventListener("click", function () { if (cameraLiveModeOf(cam.id) !== m) { cameraLiveModeSet(cam.id, m); onPick(m); } });
+          row.appendChild(b);
+        });
+        return row;
+      }
+
       // The picture of the Live tab: the chips of the cameras ("All" opens the mosaic), the preview photo of the Image tab and the button that opens
       // the floating viewer. The addresses of the camera are read once per camera and kept in the state of the page.
       function cameraLivePicture(box, c, cam) {
         studioCss(); // the frame of the picture (18-tl-studio.js)
+        var multi = c.state.liveCam === "all"; // "All": every camera at once in a grid of tiles (cameraLiveMulti)
         var chips = cameraEl("div", "");
         chips.className = "cst-chips";
         cameraList.forEach(function (x) {
           var b = cameraEl("button", null, x.name);
           b.type = "button";
-          b.className = "cst-chip" + (x.id === cam.id ? " on" : "");
+          b.className = "cst-chip" + (!multi && x.id === cam.id ? " on" : "");
           b.addEventListener("click", function () { c.state.liveCam = x.id; c.rerender(); });
           chips.appendChild(b);
         });
         if (cameraList.length > 1) {
           var all = cameraEl("button", null, i18nT('live.all_cameras'));
           all.type = "button";
-          all.className = "cst-chip";
-          all.addEventListener("click", function () { cameraOpenMosaic(); }); // the same mosaic as the viewer's button
+          all.className = "cst-chip" + (multi ? " on" : "");
+          all.addEventListener("click", function () { c.state.liveCam = "all"; c.rerender(); }); // in the page, not a floating window (the viewer keeps its own mosaic button)
           chips.appendChild(all);
         }
-        box.appendChild(chips);
+        box.appendChild(chips); if (!multi) box.appendChild(cameraLiveModes(cam, function () { c.rerender(); })); // in "All" each tile has its own
         var holder = cameraEl("div", "");
         box.appendChild(holder);
         var kept = c.state.liveUrls;
-        if (kept && kept.id === cam.id) cameraFocusPreview(holder, cam, kept.u, { go: c.go }); // 11-focus.js: the same preview as the tab Image, with its state and help
+        if (multi) cameraLiveMulti(holder, c);
+        else if (kept && kept.id === cam.id) cameraFocusPreview(holder, cam, cameraLiveUrls(cam, kept.u), { go: c.go }); // 11-focus.js: the same preview as the tab Image, with its state and help
         else {
           holder.appendChild(cameraEl("div", "", i18nT('common.reading'))).className = "ctl-muted";
           cameraUrls(cam).then(function (u) {
             c.state.liveUrls = { id: cam.id, u: u };
-            if (holder.isConnected) { holder.textContent = ""; cameraFocusPreview(holder, cam, u, { go: c.go }); }
+            if (holder.isConnected) { holder.textContent = ""; cameraFocusPreview(holder, cam, cameraLiveUrls(cam, u), { go: c.go }); }
           });
         }
         if (typeof cameraExpand === "function" && cameraPanelEl) {
           var row = cameraEl("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap;");
-          var viewerOpen = isCameraOpen(); // the button says what it will do: open the viewer, or close it when it is already open
-          row.appendChild(cameraBtn(i18nT(viewerOpen ? 'live.close_viewer' : 'live.open_viewer'), viewerOpen ? "border:1px solid #1976d2;" : "", function () { if (viewerOpen) cameraCollapse(); else cameraExpand(); c.rerender(); }));
-          row.appendChild(cameraEl("span", null, i18nT(viewerOpen ? 'live.viewer_is_open' : 'live.viewer_hint'))).className = "ctl-muted";
+          var vb = cameraBtn("", "", function () { if (isCameraOpen()) cameraCollapse(); else cameraExpand(); paintViewer(); }), vh = cameraEl("span", null, "");
+          // the button says what it will do (open the viewer, or close it when it is open) and is repainted IN PLACE: drawing the whole page again made the picture flash
+          var paintViewer = function () { if (!vb.isConnected && vb.painted) { cameraStateListeners = cameraStateListeners.filter(function (f) { return f !== paintViewer; }); return; } vb.painted = true; var o = isCameraOpen(); vb.textContent = i18nT(o ? 'live.close_viewer' : 'live.open_viewer'); vb.className = "wf-btn" + (o ? " ctl-on" : ""); vh.textContent = i18nT(o ? 'live.viewer_is_open' : 'live.viewer_hint'); };
+          paintViewer(); cameraStateListeners.push(paintViewer); vh.className = "ctl-muted"; row.appendChild(vb); row.appendChild(vh);
           box.appendChild(row);
         }
       }

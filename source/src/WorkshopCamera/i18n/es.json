@@ -109,7 +109,7 @@
 		"starting": "Iniciando el relay...",
 		"stopped": "Relay detenido.",
 		"started": "Relay iniciado.",
-		"error_sign_in": "La cámara pide iniciar sesión (o venció la clave del día). Inicia sesión de nuevo y reintenta.",
+		"error_sign_in": "La cámara pidió iniciar sesión o la clave del día venció.",
 		"error_role": "Tu rol no permite esto. Pídeselo a un administrador.",
 		"error_http": "El servicio de la cámara respondió con un error ({status})."
 	},
@@ -164,6 +164,8 @@
 		"one_per_layer_3d_printing": "Una por capa (impresión 3D)",
 		"by_time": "Por tiempo",
 		"cameras_up_to_4": "Cámaras (hasta 4)",
+		"chosen_camera_down": "{names}: no responde ahora. Si empiezas, esa cámara no tendrá fotos hasta que vuelva.",
+		"recording_without_camera": "{names}: no responde. La grabación sigue con las demás y no tendrá fotos de ella hasta que vuelva.",
 		"cancel_schedule": "Cancelar programado",
 		"by_hand_records_with_the_cameras": "A mano: graba con las cámaras y el armado de los ajustes de abajo, haya trabajo o no, hasta que toques Parar.",
 		"start_now": "Empezar ahora",
@@ -414,11 +416,12 @@
 	},
 	"roles": {
 		"no_permission": "Tu rol ({role}) no puede ver la cámara. Pide a un administrador que la active para visitas.",
-		"signed_out_camera": "Sin sesión: inicia sesión para ver la cámara.",
-		"signed_out_files": "Sin sesión: inicia sesión para ver los videos y las capturas guardados.",
+		"cover_role": "Requiere el rol {needed}. Tu rol: {role}.",
+		"signed_out_camera": "Requiere iniciar sesión para ver la cámara.",
+		"signed_out_files": "Requiere iniciar sesión para ver los videos y las capturas guardados.",
 		"no_permission_files": "Tu rol ({role}) no puede ver los videos y las capturas guardados.",
-		"hidden_signed_out": "Sin sesión: inicia sesión para ver las secciones de ajustes e imagen.",
-		"hidden_by_role": "Algunas secciones (ajustes, cámaras, imagen) son para técnicos. Tu rol: {role}.",
+		"hidden_signed_out": "Requiere iniciar sesión para ver las secciones de ajustes e imagen.",
+		"hidden_by_role": "Algunas secciones (ajustes, cámaras, imagen) requieren el rol técnico. Tu rol: {role}. Pide el acceso a un administrador.",
 		"working": "Funciona",
 		"n_watching": "{n} mirando",
 		"system_busy": "equipo ocupado",
@@ -578,6 +581,7 @@
 		"nav": "Imagen",
 		"preview": "Vista previa y enfoque",
 		"preview_hint": "Una foto que se renueva cada {s} s. El asistente de enfoque pasa a video en vivo y mide la nitidez.",
+		"preview_video_hint": "Video en vivo de la cámara. Usa más red y carga más la Pi: vuelve a Foto cuando no lo mires.",
 		"not_esp32": "Esta cámara no es una ESP32-CAM: no tiene ajustes de imagen que cambiar desde aquí.",
 		"focus_assistant": "Asistente de enfoque (medidor de nitidez)",
 		"focus_hint": "Gira el lente: la barra sube cuando la imagen está más nítida. Detente en el pico.",
@@ -621,6 +625,10 @@
 		"image": "Imagen",
 		"profile_applied": "Perfil de imagen: {name} (aplicado a la cámara)",
 		"all_cameras": "Todas",
+		"mode_photo": "Foto cada 3 s",
+		"drag_to_move": "Arrastra para mover esta cámara a otro lugar",
+		"multi_hint": "Todas las cámaras a la vez. Arrastra el asa de una cámara para ponerla en otro lugar (el orden se guarda). Cada cámara tiene sus propios botones: foto cada 3 s o su video en vivo.",
+		"mode_video": "Video en vivo",
 		"open_viewer": "Abrir el visor flotante",
 		"close_viewer": "Cerrar el visor flotante",
 		"viewer_is_open": "El visor flotante está abierto en esta pantalla.",
@@ -729,5 +737,12 @@
 		"pi_why": "Confirman sin dudas si la cámara responde en la red, al margen del relay y del navegador.",
 		"pi_missing": "Es el último recurso: si nadie puede hacerlo, los pasos anteriores ya dicen casi todo.",
 		"pi_how": "Entra por SSH al sistema y ejecuta los comandos de abajo. Si ping responde pero /status no, la cámara está colgada: apágala y enciéndela. Si ping no responde, no está en la red."
+	},
+	"helpTips": {
+		"camera_store_title": "Espacio de los videos",
+		"camera_store_what": "El límite de espacio que pueden ocupar los videos de timelapse en la tarjeta del sistema.",
+		"camera_store_why": "Evita que los videos llenen la tarjeta y que el sistema deje de guardar archivos.",
+		"camera_store_missing": "Sin límite, los videos pueden ocupar toda la tarjeta; cuando se llena, ya no se guarda nada.",
+		"camera_store_how": "Mira la barra: lo que ocupan los videos frente al límite. El límite se elige en esta misma sección."
 	}
 }

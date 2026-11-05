@@ -35,10 +35,10 @@
 
       // Pure. One quiet line for the tabs this view does not have (settings, cameras, image), or "" when it has them all: signed out -> signing in may
       // show them; a role that is too low -> only another role does.
-      function cameraPageHiddenNote(canDo, signedOut, roleLabel, t) {
+      function cameraPageHiddenNote(canDo, signedOut, roleLabel, t, state) {
         var hidden = CAMERA_PAGE_TABS.some(function (x) { return !canDo(x[2]); });
         if (!hidden) return "";
-        return signedOut ? t("roles.hidden_signed_out") : t("roles.hidden_by_role", { role: roleLabel || "" });
+        return signedOut ? t(typeof cameraSessionKeyOf === "function" ? cameraSessionKeyOf(state, "roles.hidden_signed_out") : "roles.hidden_signed_out") : t("roles.hidden_by_role", { role: roleLabel || "" });
       }
 
       // Pure. The same tabs by group: [{ label: the i18n key of the group, ids: [...] }], a group with no tab for the view is left out.
@@ -113,12 +113,8 @@
             nav.appendChild(b);
           });
         });
-        var hiddenNote = cameraPageHiddenNote(cameraCanDo, cameraSignedOut(), cameraRoleLabel(), i18nT);
-        if (hiddenNote) {
-          var note = cameraEl("div", "padding:8px 12px;font-size:11px;", hiddenNote);
-          note.className = "ctl-muted";
-          nav.appendChild(note);
-        }
+        var hiddenNote = cameraPageHiddenNote(cameraCanDo, cameraSignedOut(), cameraRoleLabel(), i18nT, typeof cameraStateNow === "function" ? cameraStateNow() : "");
+        if (hiddenNote) nav.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "section", { text: hiddenNote, action: "" }));
         return nav;
       }
 

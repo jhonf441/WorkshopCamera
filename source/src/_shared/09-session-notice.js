@@ -125,22 +125,35 @@
       // a refusal: one card that stays until it is closed (or the person signs in); the page asks for it through window.__workshop.sessionNeeded
       function workshopSessionAttention(text) {
         if (typeof document === "undefined" || !document.body) return false;
-        workshopToast(text || workshopApiT("signInNeeded"));
+        if (text) workshopToast(text);
+        else workshopRefusalToast("session");
         return true;
+      }
+
+      // A refusal told from the catalog (never from a hardcoded sentence): kind = "session" | "role", the same title and sentence as the notices of the pages.
+      // It stays until it is closed or the person signs in; the sign-in button is offered when the session is what is missing.
+      function workshopRefusalToast(kind, needed) {
+        if (typeof document === "undefined" || !document.body) return;
+        var parts = { title: workshopNoticeCoverTitle(kind), desc: workshopNoticeText(kind, needed) };
+        workshopToastShow(parts, kind, true, kind === "session");
       }
 
       function workshopToast(text) {
         if (typeof document === "undefined" || !document.body || !text) return;
+        var parts = workshopNoticeParts(text);
+        var refusal = !!parts.title; // a refusal stays; a plain message goes by itself
+        workshopToastShow(parts, WORKSHOP_LOGIN_RE.test(String(text)) ? "session" : "role", refusal, WORKSHOP_LOGIN_RE.test(String(text)));
+      }
+
+      function workshopToastShow(parts, kind, refusal, aboutSession) {
         var old = document.getElementById(WORKSHOP_NOTICE_TOAST_ID);
         if (old) old.remove();
         clearTimeout(workshopNoticeToastTimer);
-        var parts = workshopNoticeParts(text);
-        var refusal = !!parts.title; // a refusal stays; a plain message goes by itself
         var out = typeof workshopSignedOut === "function" && workshopSignedOut();
-        var opts = { bottom: 84, closable: true, kind: WORKSHOP_LOGIN_RE.test(String(text)) ? "session" : "role" };
+        var opts = { bottom: 84, closable: true, kind: kind };
         if (refusal && out) {
           opts.action = {
-            label: workshopApiT("signInAction"),
+            label: i18nT("notice.notice_sign_in"),
             run: function () {
               if (typeof workshopLogin === "function") workshopLogin();
             },
@@ -148,7 +161,7 @@
         }
         var box = workshopNoticeCard(WORKSHOP_NOTICE_TOAST_ID, parts, opts);
         box.setAttribute("role", refusal ? "alert" : "status");
-        if (WORKSHOP_LOGIN_RE.test(String(text))) box.setAttribute("data-workshop-login", "1"); // about the session: stale once the person signs in
+        if (aboutSession) box.setAttribute("data-workshop-login", "1"); // about the session: stale once the person signs in
         workshopNoticeRoot().appendChild(box);
         if (!refusal) {
           workshopNoticeToastTimer = setTimeout(function () {

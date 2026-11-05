@@ -11,14 +11,31 @@
       }
 
       // The page "Timelapses y capturas" for a view that has no gallery (a visitor): one clear line instead of an empty or failing page.
-      function cameraGalleryDenied(root) {
-        var d = cameraEl("div", "padding:16px;font:14px Roboto,sans-serif;display:flex;flex-direction:column;gap:10px;align-items:flex-start;", "");
-        d.appendChild(cameraEl("div", "", cameraDenied()));
-        // no session: signing in is what fixes it; with a role that is too low a button would promise something that cannot happen
-        if (cameraSignedOut() && typeof workshopLogin === "function") d.appendChild(cameraBtn(workshopApiT("signInAction"), "background:#1976d2;color:#fff;", function () { workshopLogin(); }));
+      function cameraGalleryDeniedBox() {
+        // N4 of the standard: no session has the sign-in button (the page has no bar), a role that is too low has none (a button would promise what cannot happen)
+        var d = cameraEl("div", "padding:16px;", "");
+        d.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: "operator", text: cameraDenied() }));
         d.setAttribute("data-workshop-i18n", "");
+        return d;
+      }
+
+      // When the person signs in (or gets a role with the gallery) the page is built in place, by itself
+      function cameraGalleryDenied(root) {
+        var d = cameraGalleryDeniedBox();
+        var inner = null;
         root.appendChild(d);
-        return { destroy: function () {} };
+        var off = typeof workshopOnSessionChange === "function" ? workshopOnSessionChange(function () {
+          if (!d.isConnected) return;
+          if (cameraCanDo("gallery")) {
+            d.remove();
+            off();
+            inner = cameraAssembleGallery(root);
+          } else {
+            d.textContent = "";
+            d.appendChild(cameraGalleryDeniedBox().firstChild);
+          }
+        }) : function () {};
+        return { destroy: function () { off(); if (inner && inner.destroy) inner.destroy(); } };
       }
 
       // The tab the page opens on: the one the address asks for (/Plugins/Timelapses?tab=cameras: the link of another page, such as the page of the

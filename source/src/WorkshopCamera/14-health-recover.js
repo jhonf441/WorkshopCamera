@@ -118,7 +118,7 @@
           ui.body.textContent = "";
           ui.results = {};
           steps.forEach(function (id, i) { ui.body.appendChild(cameraRecoverStep(ui, id, i + 1)); });
-          if (steps.length) ui.box.open = true;
+          if (steps.length && !ui.o.compact) ui.box.open = true; // compact (a tile of the grid of all the cameras): the help stays folded, it was a long strip
         }
         cameraRecoverResults(ui);
       }

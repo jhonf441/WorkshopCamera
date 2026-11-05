@@ -109,7 +109,7 @@
 		"starting": "Starting the relay...",
 		"stopped": "Relay stopped.",
 		"started": "Relay started.",
-		"error_sign_in": "The camera asks you to sign in (or the key of the day expired). Sign in again and retry.",
+		"error_sign_in": "The camera asked for a session or the key of the day expired.",
 		"error_role": "Your role does not allow this. Ask an administrator.",
 		"error_http": "The camera service answered with an error ({status})."
 	},
@@ -164,6 +164,8 @@
 		"one_per_layer_3d_printing": "One per layer (3D printing)",
 		"by_time": "By time",
 		"cameras_up_to_4": "Cameras (up to 4)",
+		"chosen_camera_down": "{names}: not responding now. If you start, that camera gets no photos until it comes back.",
+		"recording_without_camera": "{names}: not responding. The recording goes on with the others and has no photos from it until it comes back.",
 		"cancel_schedule": "Cancel schedule",
 		"by_hand_records_with_the_cameras": "By hand: records with the cameras and the layout set below, with or without a job, until you tap Stop.",
 		"start_now": "Start now",
@@ -414,11 +416,12 @@
 	},
 	"roles": {
 		"no_permission": "Your role ({role}) cannot see the camera. Ask an administrator to enable it for visitors.",
-		"signed_out_camera": "Not signed in: sign in to see the camera.",
-		"signed_out_files": "Not signed in: sign in to see the saved videos and captures.",
+		"cover_role": "Requires the {needed} role. Your role: {role}.",
+		"signed_out_camera": "Sign-in required to see the camera.",
+		"signed_out_files": "Sign-in required to see the saved videos and captures.",
 		"no_permission_files": "Your role ({role}) cannot see the saved videos and captures.",
-		"hidden_signed_out": "Not signed in: sign in to see the settings and image sections.",
-		"hidden_by_role": "Some sections (settings, cameras, image) are for technicians. Your role: {role}.",
+		"hidden_signed_out": "Sign-in required to see the settings and image sections.",
+		"hidden_by_role": "Some sections (settings, cameras, image) require the technician role. Your role: {role}. Ask an administrator for access.",
 		"working": "Working",
 		"n_watching": "{n} watching",
 		"system_busy": "system busy",
@@ -578,6 +581,7 @@
 		"nav": "Image",
 		"preview": "Preview and focus",
 		"preview_hint": "A photo that refreshes every {s} s. The focus assistant switches to live video and measures the sharpness.",
+		"preview_video_hint": "Live video of the camera. It uses more network and loads the Pi more: go back to Photo when you are not watching.",
 		"not_esp32": "This camera is not an ESP32-CAM: it has no image settings to change from here.",
 		"focus_assistant": "Focus assistant (sharpness meter)",
 		"focus_hint": "Turn the lens: the bar rises when the image is sharper. Stop at the peak.",
@@ -621,6 +625,10 @@
 		"image": "Image",
 		"profile_applied": "Image profile: {name} (applied to the camera)",
 		"all_cameras": "All",
+		"mode_photo": "Photo every 3 s",
+		"drag_to_move": "Drag to move this camera to another place",
+		"multi_hint": "Every camera at once. Drag the handle of a camera to put it somewhere else (the order is kept). Each camera has its own buttons: a photo every 3 s or its live video.",
+		"mode_video": "Live video",
 		"open_viewer": "Open the floating viewer",
 		"close_viewer": "Close the floating viewer",
 		"viewer_is_open": "The floating viewer is open on this screen.",
@@ -729,5 +737,12 @@
 		"pi_why": "They confirm without doubt whether the camera answers on the network, apart from the relay and the browser.",
 		"pi_missing": "It is the last resort: if nobody can do it, the steps above already say almost everything.",
 		"pi_how": "Log in to the system by SSH and run the commands below. If ping answers but /status does not, the camera is hung: power cycle it. If ping does not answer, it is not on the network."
+	},
+	"helpTips": {
+		"camera_store_title": "Video space",
+		"camera_store_what": "The limit of space the timelapse videos may take on the system card.",
+		"camera_store_why": "It keeps the videos from filling the card and the system from failing to save files.",
+		"camera_store_missing": "Without a limit the videos can take the whole card; once it is full nothing more is saved.",
+		"camera_store_how": "Look at the bar: what the videos take against the limit. The limit is chosen in this same section."
 	}
 }

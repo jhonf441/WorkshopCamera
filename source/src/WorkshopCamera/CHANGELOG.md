@@ -1,5 +1,17 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.5 -- 2026-11-04
+
+- Rebuilt with the readable text colours, the shared start-up card and the session notice
+
+## 2.13.4 -- 2026-11-04
+
+- Viewer: the minimum size is now 250x190 so Retry, Help and the state badge no longer cover each other
+
+## 2.13.3 -- 2026-11-04
+
+- No raw 'could not read the service' line while signed out
+
 ## 2.13.2 -- 2026-11-04
 
 - Rebuilt with the AWS-style session notice

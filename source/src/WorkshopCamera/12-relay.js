@@ -30,9 +30,12 @@
         }
       }
 
-      // Pure: "reading" (not read yet) | "running" | "stopped" | "nocam" (no camera address yet: nothing to start) | "unknown" (the service did not answer).
+      // Pure: "reading" (not read yet) | "running" | "stopped" | "nocam" (no camera address yet: nothing to start) | "signed_out" (the service asked for a
+      // session) | "forbidden" (the role cannot read it) | "unknown" (the service did not answer).
       function cameraRelayStateOf(status) {
         if (!status) return "reading";
+        if (status.code === "login_required") return "signed_out";
+        if (status.code === "forbidden") return "forbidden";
         if (status.error) return "unknown";
         if (status.running) return "running";
         return status.configured === false ? "nocam" : "stopped";
@@ -40,10 +43,13 @@
 
       // Reads camera.status into rs.status and draws the tab again. An answer that comes after the tab went away is dropped.
       function cameraRelayLoad(rs) {
-        return workshopApiText("camera.status")
-          .then(cameraRelayParse)
+        // workshopApi (not workshopApiText): the code of a refusal (login_required / forbidden) must survive to tell no session from a low role
+        return workshopApi("camera.status")
+          .then(function (r) { return cameraRelayParse(typeof r === "string" ? r : JSON.stringify(r)); })
           .catch(function (e) {
-            return { error: String(e && e.message ? e.message : e) };
+            var failed = { error: String(e && e.message ? e.message : e) };
+            if (e && e.code) failed.code = e.code;
+            return failed;
           })
           .then(function (s) {
             rs.status = s;

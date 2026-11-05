@@ -16,11 +16,12 @@
       var CAMERA_PANEL_ID = "workshop-camera-panel";
       var CAMERA_W = 340; // wide enough for the four round buttons of the bottom row and the label of the button to the page
       var CAMERA_H = 226;
-      // Smallest the viewer can be made (2026-11-04): the top row (flash, mode, close) and the bottom row (four round buttons, the page button as an
-      // icon, the corner) need about 190 px and the picture needs some height of its own; smaller than that nothing is readable. Under
-      // CAMERA_COMPACT_W the buttons with a word become icons (the page button; the camera chips show their number, the name stays in the tooltip).
-      var CAMERA_MIN_W = 190;
-      var CAMERA_MIN_H = 120;
+      // Smallest the viewer can be made (2026-11-04): the top row (flash, mode, close), the badge under it, the bottom row (four round buttons, the
+      // page button as an icon, the corner) and, when the picture fails, the Retry and "Help" buttons stacked in the middle must all fit without
+      // covering each other (owner report 2026-11-04: at 190x120 they covered the badge text "does not respond"). Under CAMERA_COMPACT_W the
+      // buttons with a word become icons (the page button; the camera chips show their number, the name stays in the tooltip).
+      var CAMERA_MIN_W = 250;
+      var CAMERA_MIN_H = 190;
       var CAMERA_COMPACT_W = 300;
       var CAMERA_MAX_W = 640;
       var CAMERA_MAX_H = 480;

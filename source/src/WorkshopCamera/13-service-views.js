@@ -12,7 +12,10 @@
 
       // The page "Timelapses y capturas" for a view that has no gallery (a visitor): one clear line instead of an empty or failing page.
       function cameraGalleryDenied(root) {
-        var d = cameraEl("div", "padding:16px;font:14px Roboto,sans-serif;", i18nT('roles.no_permission'));
+        var d = cameraEl("div", "padding:16px;font:14px Roboto,sans-serif;display:flex;flex-direction:column;gap:10px;align-items:flex-start;", "");
+        d.appendChild(cameraEl("div", "", cameraDenied()));
+        // no session: signing in is what fixes it; with a role that is too low a button would promise something that cannot happen
+        if (cameraSignedOut() && typeof workshopLogin === "function") d.appendChild(cameraBtn(workshopApiT("signInAction"), "background:#1976d2;color:#fff;", function () { workshopLogin(); }));
         d.setAttribute("data-workshop-i18n", "");
         root.appendChild(d);
         return { destroy: function () {} };

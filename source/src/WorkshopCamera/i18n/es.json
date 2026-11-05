@@ -413,7 +413,12 @@
 		"clock_missing": "Las fotos saldrán con fecha equivocada. Conecta la Pi a internet un momento o ajusta la hora."
 	},
 	"roles": {
-		"no_permission": "Tu usuario no tiene permiso para ver la cámara. Pide a un administrador que la active para visitas.",
+		"no_permission": "Tu rol ({role}) no puede ver la cámara. Pide a un administrador que la active para visitas.",
+		"signed_out_camera": "Sin sesión: inicia sesión para ver la cámara.",
+		"signed_out_files": "Sin sesión: inicia sesión para ver los videos y las capturas guardados.",
+		"no_permission_files": "Tu rol ({role}) no puede ver los videos y las capturas guardados.",
+		"hidden_signed_out": "Sin sesión: inicia sesión para ver las secciones de ajustes e imagen.",
+		"hidden_by_role": "Algunas secciones (ajustes, cámaras, imagen) son para técnicos. Tu rol: {role}.",
 		"working": "Funciona",
 		"n_watching": "{n} mirando",
 		"system_busy": "equipo ocupado",

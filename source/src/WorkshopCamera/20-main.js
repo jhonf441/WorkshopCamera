@@ -19,7 +19,7 @@
             open: open,
             disabled: noPanel,
             statusText: denied
-              ? i18nT('roles.no_permission')
+              ? cameraDenied()
               : noPanel
               ? cameraAddressState === "missing"
                 ? i18nT('main.no_camera_yet_add_the_first_one')

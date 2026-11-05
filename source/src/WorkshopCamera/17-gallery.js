@@ -14,8 +14,9 @@
       // The saved files and the relay's state: what the page loads. A list is null when the relay does not answer.
       // withPerDelete: also what the relay is going to delete by itself.
       function cameraGalleryLoad(withPerDelete) {
-        return Promise.all([cameraRelayList("video"), cameraRelayList("photo"), cameraStateRead(), withPerDelete ? cameraRelayPerDelete() : null]).then(function (r) {
-          return { timelapses: r[0], captures: r[1], state: r[2], perDelete: r[3] };
+        var why = {}; // why.cause when a list could not be read: the page says it (login_required / forbidden / error / unreachable)
+        return Promise.all([cameraRelayList("video", why), cameraRelayList("photo", why), cameraStateRead(), withPerDelete ? cameraRelayPerDelete() : null]).then(function (r) {
+          return { timelapses: r[0], captures: r[1], state: r[2], perDelete: r[3], why: why };
         });
       }
 
@@ -38,7 +39,7 @@
         page.className = "ctl ctl-page workshop-theme";
         page.setAttribute("data-workshop-i18n", "");
         root.appendChild(page);
-        var tls = null, caps = null, est = null, noCam = false; // noCam: the service says no camera is added yet (18-no-camera.js)
+        var tls = null, caps = null, est = null, whyFail = {}, noCam = false; // noCam: the service says no camera is added yet (18-no-camera.js)
         var pb = null; // {items: [{archivo, tipo, motivo, hasta}], wait_h}: what is going to be deleted by itself
         var sel = {}; // archivo -> true
         var filtro = "";
@@ -61,6 +62,7 @@
               if (!borrador) borrador = JSON.parse(JSON.stringify(c));
             })
             .catch(function (e) {
+              if (typeof workshopSignedOut === "function" && workshopSignedOut()) return; // the sign-in chip says it: no second raw line
               notice(i18nT('common.could_not_read_the_service', { error: String(e.message || e) }), false);
             })
             .then(render);
@@ -70,8 +72,7 @@
           return cameraGalleryLoad(true).then(function (g) {
             pb = g.perDelete;
             tls = g.timelapses;
-            caps = g.captures;
-            est = g.state;
+            caps = g.captures; est = g.state; whyFail = g.why || {};
             return tls === null && caps === null ? cameraNoCameraProbe() : false;
           }).then(function (none) { noCam = !!none; render(); });
         }
@@ -248,7 +249,7 @@
             bus._t = setTimeout(function () { busFoco = true; render(); }, 250);
           });
           if (tls === null && caps === null) {
-            page.appendChild(cameraEl("div", "color:var(--c-error,#ef9a9a);", i18nT('gallery.could_not_read_the_system_relay')));
+            cameraGalleryFailed(page, whyFail);
             return;
           }
           // second level tabs (wf-tabs): All | Videos (n) | Captures (n) | Kept
@@ -452,7 +453,7 @@
 
         load();
         loadCfg();
-        var busyBefore = false;
+        var busyBefore = false; var offIdentity = cameraGalleryOnIdentity(page, function () { load(); loadCfg(); });
         timer = cameraGalleryPoll(function (d) {
           est = d || est;
           var t = d && d.timelapse;
@@ -462,7 +463,23 @@
           if ((busy || busyBefore) && cameraPageReloads(pestana, held)) load(); // the tabs that hold what is being typed (or a player, or a selection) are not redrawn
           busyBefore = busy;
         });
-        return cameraGalleryHandle(page, function () { clearInterval(timer); });
+        return cameraGalleryHandle(page, function () { clearInterval(timer); if (offIdentity) offIdentity(); });
+      }
+
+      // A list the relay did not give: a refusal (no session, role) is told as such, calm and with the sign-in button when the session is missing; only
+      // a real network failure says the relay is unreachable (why = { cause, status } of cameraRelayRead).
+      function cameraGalleryFailed(page, why) {
+        var cause = why.cause || "unreachable";
+        var refused = cause === "login_required" || cause === "forbidden";
+        page.appendChild(cameraEl("div", refused ? "color:var(--c-amber,#ffe082);" : "color:var(--c-error,#ef9a9a);", cameraRelayCauseNow(cause, why.status)));
+        if (cause === "login_required" && cameraSignedOut() && typeof workshopLogin === "function") {
+          page.appendChild(cameraBtn(workshopApiT("signInAction"), "background:#1976d2;color:#fff;margin-top:8px;", function () { workshopLogin(); }));
+        }
+      }
+
+      // The person signed in or out (or changed role): what the relay refused is read again now, not at the next refresh. Returns the way to stop listening.
+      function cameraGalleryOnIdentity(page, reread) {
+        return typeof workshopOnIdentity === "function" ? workshopOnIdentity(function () { if (page.isConnected) reread(); }) : null;
       }
 
       // Asks the relay's state every 3 s while the page is open (not while the tab is hidden); onState(state) gets each answer. Returns the timer.

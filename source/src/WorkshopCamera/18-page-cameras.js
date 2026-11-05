@@ -40,6 +40,9 @@
       function cameraCamerasAddress(S, cam) {
         if (cam.url) return cam.url;
         var relay = S.rs.status;
+        var why = cameraRelayStateOf(relay);
+        if (why === "signed_out") return i18nT("roles.signed_out_files");
+        if (why === "forbidden") return i18nT("roles.no_permission_files", { role: cameraRoleLabel() });
         return relay && relay.url ? i18nT('cameras.system_relay') + relay.port + " <- " + relay.url : i18nT('cameras.system_relay_2');
       }
 

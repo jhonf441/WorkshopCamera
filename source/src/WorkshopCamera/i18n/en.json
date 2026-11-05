@@ -413,7 +413,12 @@
 		"clock_missing": "Photos will carry the wrong date. Connect the Pi to the internet for a moment or set the time."
 	},
 	"roles": {
-		"no_permission": "Your user is not allowed to see the camera. Ask an administrator to enable it for visitors.",
+		"no_permission": "Your role ({role}) cannot see the camera. Ask an administrator to enable it for visitors.",
+		"signed_out_camera": "Not signed in: sign in to see the camera.",
+		"signed_out_files": "Not signed in: sign in to see the saved videos and captures.",
+		"no_permission_files": "Your role ({role}) cannot see the saved videos and captures.",
+		"hidden_signed_out": "Not signed in: sign in to see the settings and image sections.",
+		"hidden_by_role": "Some sections (settings, cameras, image) are for technicians. Your role: {role}.",
 		"working": "Working",
 		"n_watching": "{n} watching",
 		"system_busy": "system busy",

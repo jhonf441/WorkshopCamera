@@ -237,6 +237,7 @@
       // The flash button says its state by itself: on = bright yellow with a halo, off = dark grey with a struck-through bolt (two yellows were hard to tell apart)
       function cameraFlashPaint(btn, on) {
         btn.style.background = on ? "#ffeb3b" : "#37474f";
+        btn.style.color = on ? "#000" : "#fff"; // the bolt is read on either background
         btn.style.boxShadow = on ? "0 0 0 2px #fff, 0 0 10px 3px #fff176" : "none";
         btn.style.opacity = on ? "1" : "0.85";
         btn.setAttribute("aria-pressed", on ? "true" : "false");

@@ -90,11 +90,27 @@
       }
 
       // A reading: the JSON, or `fallback` when the relay does not answer, refuses or answers something that is not JSON.
-      function cameraRelayRead(path, fallback) {
+      // why (optional, an object) gets why.cause and why.status when the reading fails: see cameraRelayCause.
+      function cameraRelayRead(path, fallback, why) {
         return cameraRelayCall(path, "GET").then(
-          function (res) { return res.ok && res.data !== null ? res.data : fallback; },
-          function () { return fallback; }
+          function (res) {
+            if (res.ok && res.data !== null) return res.data;
+            if (why) { why.cause = cameraRelayCause(res.status, res.ok); why.status = res.status; }
+            return fallback;
+          },
+          function () {
+            if (why) { why.cause = "unreachable"; why.status = 0; }
+            return fallback;
+          }
         );
+      }
+
+      // Pure: why a reading of the relay failed. 401 -> "login_required", 403 -> "forbidden", any other answer that is not usable -> "error"
+      // (the relay answered: it is not down); "unreachable" is only a network failure (it never reaches here, the call rejects).
+      function cameraRelayCause(status, ok) {
+        if (status === 401) return "login_required";
+        if (status === 403) return "forbidden";
+        return ok || status ? "error" : "unreachable";
       }
 
       // A POST of :8090 (only the LUTs): always resolves { ok, error? } (the relay's own answer, or the text of the refusal); only a network failure rejects.
@@ -111,8 +127,9 @@
       }
 
       // The saved files, newest first: kind "video" | "photo". null = the relay does not answer.
-      function cameraRelayList(kind) {
-        return cameraRelayRead(kind === "video" ? "/timelapses" : "/captures", null);
+      // why (optional): see cameraRelayRead.
+      function cameraRelayList(kind, why) {
+        return cameraRelayRead(kind === "video" ? "/timelapses" : "/captures", null, why);
       }
 
       // What the relay is going to delete by itself because of the caps ({items, wait_h}); null = it does not say

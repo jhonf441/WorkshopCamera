@@ -1,5 +1,13 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.8 -- 2026-11-05
+
+- Camera: viewer reads relay state in photo mode too; page button shows/closes the open viewer
+
+## 2.13.7 -- 2026-11-05
+
+- Darker primary button hover, Workbench save label, generic RS485 notes
+
 ## 2.13.6 -- 2026-11-04
 
 - Sign out no longer reopens the PIN dialog

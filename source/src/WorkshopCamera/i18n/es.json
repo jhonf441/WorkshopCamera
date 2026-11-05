@@ -622,6 +622,8 @@
 		"profile_applied": "Perfil de imagen: {name} (aplicado a la cámara)",
 		"all_cameras": "Todas",
 		"open_viewer": "Abrir el visor flotante",
+		"close_viewer": "Cerrar el visor flotante",
+		"viewer_is_open": "El visor flotante está abierto en esta pantalla.",
 		"viewer_hint": "Video en vivo, zoom y pantalla completa.",
 		"no_photo_yet": "Todavía no hay foto de esta cámara en esta grabación."
 	},

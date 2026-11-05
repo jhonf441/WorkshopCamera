@@ -202,8 +202,9 @@
         }
         if (typeof cameraExpand === "function" && cameraPanelEl) {
           var row = cameraEl("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap;");
-          row.appendChild(cameraBtn(i18nT('live.open_viewer'), "", function () { cameraExpand(); })); // what the button of the launcher does: shows the floating viewer
-          row.appendChild(cameraEl("span", null, i18nT('live.viewer_hint'))).className = "ctl-muted";
+          var viewerOpen = isCameraOpen(); // the button says what it will do: open the viewer, or close it when it is already open
+          row.appendChild(cameraBtn(i18nT(viewerOpen ? 'live.close_viewer' : 'live.open_viewer'), viewerOpen ? "border:1px solid #1976d2;" : "", function () { if (viewerOpen) cameraCollapse(); else cameraExpand(); c.rerender(); }));
+          row.appendChild(cameraEl("span", null, i18nT(viewerOpen ? 'live.viewer_is_open' : 'live.viewer_hint'))).className = "ctl-muted";
           box.appendChild(row);
         }
       }

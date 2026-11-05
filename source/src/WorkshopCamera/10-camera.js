@@ -230,7 +230,7 @@
         function healthStart() {
           healthStop();
           var again = liveMode ? startLiveMode : startSnapshotMode; // Retry asks again in the mode on screen (never back to photo from live)
-          health = cameraHealthWatch(img, cameraCurrent || cameraChosen(), { video: liveMode, photo: snapshotUrl, relayPoll: liveMode, onChange: paintHealth, reload: again });
+          health = cameraHealthWatch(img, cameraCurrent || cameraChosen(), { video: liveMode, photo: snapshotUrl, relayPoll: true, onChange: paintHealth, reload: again });
         }
         function healthStop() {
           if (health) cameraHealthStop(health);

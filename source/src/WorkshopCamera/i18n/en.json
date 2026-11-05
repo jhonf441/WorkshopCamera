@@ -622,6 +622,8 @@
 		"profile_applied": "Image profile: {name} (applied to the camera)",
 		"all_cameras": "All",
 		"open_viewer": "Open the floating viewer",
+		"close_viewer": "Close the floating viewer",
+		"viewer_is_open": "The floating viewer is open on this screen.",
 		"viewer_hint": "Live video, zoom and full screen.",
 		"no_photo_yet": "No photo of this camera in this recording yet."
 	},

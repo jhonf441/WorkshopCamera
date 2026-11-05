@@ -34,7 +34,7 @@
         pinMissing: "Write your name and PIN.",
         pinWrong: "Wrong name or PIN.",
         loginCancelled: "Identification is needed to continue.",
-        signInNeeded: "Not authorized: you need to sign in.",
+        signInNeeded: "Not signed in: this action requires signing in.",
         signedOut: "Not signed in: you can only look.",
         signInAction: "Sign in",
         permissionTitle: "Not authorized",

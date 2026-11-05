@@ -76,6 +76,26 @@
 		"help_tip_missing": "Without it",
 		"help_tip_how": "How to use it"
 	},
+	"notice": {
+		"notice_bar_chip": "Not signed in · Sign in",
+		"notice_bar_chip_help": "This browser has no session. Tap to sign in with your name and PIN.",
+		"notice_sign_in": "Sign in",
+		"notice_session_reason": "Sign-in required.",
+		"notice_session_cover_title": "Not signed in",
+		"notice_session_cover": "Sign in with your name and PIN to see this.",
+		"notice_role_reason": "Requires the {needed} role. Your role: {role}.",
+		"notice_role_cover_title": "Not allowed for your role",
+		"notice_hidden": "Some sections require signing in or another role.",
+		"notice_down_reason": "The workshop service is not responding.",
+		"notice_down_cover_title": "Service not responding",
+		"notice_error_cover_title": "Something went wrong",
+		"notice_retry": "Retry",
+		"notice_refused_session": "This action requires signing in.",
+		"lockrole_viewer": "visitor",
+		"lockrole_operator": "operator",
+		"lockrole_technician": "technician",
+		"lockrole_admin": "administrator"
+	},
 	"dwcState": {
 		"no_connection_to_the_machine": "no connection to the machine"
 	},
@@ -126,8 +146,8 @@
 		"service_tip": "It has to be running: it makes the examples and answers the buttons of this plugin.",
 		"service_not_running": "is not running (Settings > Plugins)",
 		"service_sign_in": "needs you to sign in to be checked",
+		"service_session": "Not signed in: cannot be checked.",
 		"service_role": "your role cannot check it: a technician is needed",
-		"locked": "Not signed in: sign in to create or change files from here.",
 		"what_is": "What is this?",
 		"what_is_hide": "Hide the explanation",
 		"what_label": "What it is",

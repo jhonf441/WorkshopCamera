@@ -247,7 +247,8 @@
           var h = health && health.h;
           modeBadge(liveMode, h);
           var alive = !h || h.state === "fresh" || h.state === "waiting";
-          helpBtn.style.display = !alive && cameraPageLinkShown(cameraCanDo("gallery"), cameraPageRegistered) ? "" : "none";
+          helpBtn.style.display = !alive && cameraPageRegistered ? "" : "none"; // locked (not hidden) for a view without the gallery
+          helpBtn.disabled = !cameraCanDo("gallery");
           viewBtn.style.display = alive ? "none" : ""; // Retry whenever the picture is not alive, in either mode
         }
 
@@ -332,6 +333,7 @@
           cameraOpenPage("live");
           if (workshopIsNarrow()) cameraCollapse();
         });
+        cameraNarrowIcons(panel, viewBtn, helpBtn); // 11-panel-parts.js: icons only when the viewer is narrow
 
         img.addEventListener("load", function () {
           if (connectTimeoutId) {
@@ -339,7 +341,8 @@
             connectTimeoutId = null;
           }
           img.style.setProperty("display", "block", "important");
-          flashBtn.style.display = cameraCanDo("flash") && cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none"; // a viewer has no flash: the relay would refuse it
+          flashBtn.style.display = cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
+          flashBtn.disabled = !cameraCanDo("flash"); // a viewer sees the flash button locked (the relay would refuse it): the panel says why, once
         });
 
         cameraResizeHandle(panel); // 11-panel-parts.js: the corner that resizes the viewer
@@ -483,7 +486,10 @@
           var rid = cameraRelayId(cameraCurrent);
           capBtn.style.opacity = rid ? "1" : "0.4";
           var shown = img.style.display === "block" || img.style.getPropertyValue("display") === "block";
-          if (shown) flashBtn.style.display = cameraCanDo("flash") && cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
+          if (shown) {
+            flashBtn.style.display = cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";
+            flashBtn.disabled = !cameraCanDo("flash");
+          }
           flashFromRecord(); // the relay was read again: the button says what the service says
         }
         cameraStateListeners.push(paintDown);

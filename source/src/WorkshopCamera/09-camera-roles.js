@@ -116,9 +116,27 @@
       // Shows or hides the controls of the floating panel for the view; repaints when the person logs in or out.
       // parts = { capture, page } (the quick capture and the button to the page: the only buttons of buildCameraPanel that depend on the role).
       function cameraRoleBind(panel, parts) {
+        var reason = null; // ONE reason for the locked controls of the panel (capture and flash), below them: no session blue, role gray
         function apply() {
-          parts.capture.style.display = cameraCanDo("capture") ? "" : "none";
-          parts.page.style.display = cameraPageLinkShown(cameraCanDo("gallery"), cameraPageRegistered) ? "flex" : "none"; // 18-page-tabs.js
+          // the quick capture stays in its place: locked (not hidden) for a view that cannot take it, with the reason below
+          var canCapture = cameraCanDo("capture");
+          parts.capture.style.display = "";
+          parts.capture.disabled = !canCapture;
+          if (reason && reason.parentNode) reason.parentNode.removeChild(reason);
+          reason = null;
+          // the button to the page: locked (not hidden) for a view without the gallery; hidden only when the page is not registered at all
+          var canGallery = cameraCanDo("gallery");
+          var pageHere = !!cameraPageRegistered;
+          if (!canCapture || (pageHere && !canGallery)) {
+            if (typeof workshopReasonEl === "function") {
+              var kind = cameraSignedOut() ? "session" : "role";
+              reason = workshopReasonEl(kind, workshopNoticeText(kind, "operator"));
+              reason.style.margin = "4px 8px";
+              panel.appendChild(reason);
+            }
+          }
+          parts.page.style.display = pageHere ? "flex" : "none"; // 18-page-tabs.js
+          parts.page.disabled = !canGallery;
         }
         apply();
         if (typeof workshopOnIdentity !== "function") return;

@@ -80,7 +80,19 @@
 
       // {state, since_s} from the facts f at the time now (ms). The order is the order of certainty: a request that failed, what the relay says,
       // no picture at all, a black picture, a picture that stopped; the rest is fresh.
+      // After the flash is switched the camera may restart for a moment (the LED pulls the supply): while f.graceUntil lasts, "down" and "unreachable"
+      // read as "waiting" so the retry and recovery help do not appear for a camera that is only coming back.
       function cameraHealthDecide(f, now) {
+        var h = cameraHealthDecideRaw(f, now);
+        if (f.graceUntil && now < f.graceUntil && (h.state === "down" || h.state === "unreachable")) return { state: "waiting", since_s: 0 };
+        return h;
+      }
+      var CAMERA_HEALTH_FLASH_GRACE_MS = 12000;
+      // Called when the flash of a camera was asked: its watches get the grace period.
+      function cameraHealthFlashGrace(rid) {
+        cameraHealthWatches.forEach(function (W) { if (W.rid === rid) { W.facts.graceUntil = Date.now() + CAMERA_HEALTH_FLASH_GRACE_MS; W.facts.errorMs = 0; } });
+      }
+      function cameraHealthDecideRaw(f, now) {
         var failed = f.errorMs > 0 && f.errorMs >= f.lastLoadMs;
         if (failed && f.relayKnown === false) return { state: "unreachable", since_s: 0 };
         var relay = cameraHealthFromRelay(f.relay);

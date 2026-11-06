@@ -61,6 +61,11 @@
 
       // The notice of the last action on the page (green or red), and the timer that takes it off by itself WITHOUT drawing the page again (a form may be open).
       function cameraNoticeEl(page, ok, text) {
+        // a refusal (no session / role too low) is never red: the shared notice of its cause (blue session, gray role)
+        if (!ok && typeof WORKSHOP_PERMISSION_RE !== "undefined" && WORKSHOP_PERMISSION_RE.test(String(text || "")) && typeof workshopNoticeEl === "function") {
+          var rk = typeof WORKSHOP_LOGIN_RE !== "undefined" && WORKSHOP_LOGIN_RE.test(String(text)) ? "session" : "role";
+          return page.appendChild(workshopNoticeEl(rk, "section", { text: String(text), action: "" }));
+        }
         var el = page.appendChild(cameraEl("div", "color:" + (ok ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)") + ";", text));
         el.className = "ctl-alert " + (ok ? "green" : "red");
         return el;
@@ -190,7 +195,7 @@
         }
         function irPestana(k) {
           k = cameraPageTabMigrate(k);
-          pestana = cameraPageTabsFor(cameraCanDo).indexOf(k) >= 0 ? k : "live";
+          pestana = cameraPageTabsFor(function () { return true; }).indexOf(k) >= 0 ? k : "live"; // a locked tab opens too: its cover says why
           viendo = null;
           multi = false;
           cameraPageForget(pageState);
@@ -246,6 +251,9 @@
           if (t && (t.assembling || t.editing)) page.appendChild(cameraEl("div", "", i18nT('gallery.the_system_is_building_a_video'))).className = "ctl-alert blue";
           msgEl = msg ? cameraNoticeEl(page, msgOk, msg) : null;
           if (pb && pb.items && pb.items.length) page.appendChild(noticeByDelete());
+          // a tab above the role: ONE cover (no session blue, role too low gray, no button: the chip of the bar has the sign-in)
+          var lockedTab = cameraPageTabNeed(pestana, cameraCanDo);
+          if (lockedTab) return page.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: lockedTab, action: "" }));
           if (pestana === "live") return cameraLiveTab(page, ctx()); // 18-page-live.js
           if (pestana === "store" && cameraCanDo("settings")) return renderSettings();
           if (pestana === "studio" && cameraCanDo("settings")) return cameraStudioPage(page, ctx());

@@ -226,6 +226,28 @@
         return button;
       }
 
+      // Narrow viewer: Retry and the help button are round icons side by side (the words stay in the tooltip), so they never cover the picture or each other.
+      function cameraNarrowIcons(panel, retry, help) {
+        var ICON_RETRY = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4z"/></svg>';
+        var ICON_HELP = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M11 18h2v-2h-2v2zm1-16a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm0-14a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>';
+        var retryWords = retry.textContent, helpWords = help.textContent;
+        retry.title = retryWords;
+        function paint() {
+          var small = cameraIsCompact(panel);
+          retry.innerHTML = small ? ICON_RETRY : "";
+          if (!small) retry.textContent = retryWords;
+          help.innerHTML = small ? ICON_HELP : "";
+          if (!small) help.textContent = helpWords;
+          retry.style.padding = help.style.padding = small ? "0" : "";
+          retry.style.width = retry.style.height = help.style.width = help.style.height = small ? "32px" : "";
+          retry.style.borderRadius = help.style.borderRadius = small ? "50%" : "";
+          retry.style.transform = small ? "translate(-120%,-50%)" : "translate(-50%,-50%)";
+          help.style.transform = small ? "translate(20%,-50%)" : "translate(-50%,28px)";
+        }
+        paint();
+        panel.addEventListener("camera-compact", paint);
+      }
+
       // A size saved on a wide screen is brought inside a narrow window (a phone), or the "x" of the viewer ends up off screen.
       function cameraFitSize(size) {
         return {
@@ -263,6 +285,7 @@
       // says) and remembers it; this only asks and keeps the answer in the camera record. Resolves {ok, error?, flash?}; never rejects.
       var cameraFlashMine = {}; // MO-7: the lights THIS page switched on and has not switched off yet (camera id -> camera)
       function cameraFlashSet(camera, on, opts) {
+        if (typeof cameraHealthFlashGrace === "function") cameraHealthFlashGrace(cameraRelayId(camera)); // 14-health.js: the camera may restart with the LED
         return workshopApi("camera.flash", { camera: camera.id, on: !!on }, opts).then(
           function (r) {
             if (r && r.flash) {
@@ -298,12 +321,24 @@
         b.setAttribute("data-workshop-i18n", "");
         b.style.cssText = "position:absolute;padding:1px 7px;border-radius:9px;font:bold 10px Roboto,sans-serif;color:#fff;pointer-events:none;z-index:2;" + css;
         host.appendChild(b);
-        return function (live, h) {
+        var last = [false, null];
+        var viewer = typeof CAMERA_PANEL_ID !== "undefined" && host.id === CAMERA_PANEL_ID; // only the floating viewer has a narrow look
+        var paint = function (live, h) {
+          last = [live, h];
           var state = h ? h.state : "waiting";
-          b.textContent = !h || state === "fresh" ? (live ? "● " + i18nT('camera.badge_live') : i18nT('camera.badge_photo', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 })) : cameraHealthWord(h, i18nT);
+          var words = !h || state === "fresh" ? (live ? "● " + i18nT('camera.badge_live') : i18nT('camera.badge_photo', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 })) : cameraHealthWord(h, i18nT);
+          var small = viewer && cameraIsCompact(host); // narrow viewer: a coloured dot, the words stay in the tooltip
+          b.textContent = small ? "" : words;
+          b.title = words;
+          b.style.width = small ? "10px" : "";
+          b.style.height = small ? "10px" : "";
+          b.style.padding = small ? "0" : "1px 7px";
+          b.style.borderRadius = small ? "50%" : "9px";
           b.style.background = cameraHealthFill(state);
           b.setAttribute("data-state", state);
         };
+        if (viewer) host.addEventListener("camera-compact", function () { paint(last[0], last[1]); });
+        return paint;
       }
 
       // The round button of the top left corner, before it says anything: the flash of the viewer (its state is painted by cameraFlashPaint).

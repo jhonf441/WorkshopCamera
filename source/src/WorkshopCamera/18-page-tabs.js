@@ -48,6 +48,17 @@
         }).filter(function (g) { return g.ids.length; });
       }
 
+      // Pure. The side bar lists EVERY tab (AWS rule: what you cannot open stays in its place, locked, with the role that opens it): the groups with all the ids.
+      function cameraPageNavGroupsFor() {
+        return cameraPageGroupsFor(function () { return true; });
+      }
+
+      // Pure. The role that opens a tab for a view, or "" when the view has it: the tabs of the settings and of the cameras are the technician's.
+      function cameraPageTabNeed(id, canDo) {
+        var t = CAMERA_PAGE_TABS.filter(function (x) { return x[0] === id; })[0];
+        return t && !canDo(t[2]) ? "technician" : "";
+      }
+
       function cameraPageTabIcon(id) {
         return CAMERA_PAGE_TABS.filter(function (t) { return t[0] === id; })[0][1];
       }
@@ -114,7 +125,7 @@
         fold.appendChild(cameraEl("span", "")).className = "mdi " + (o.folded ? "mdi-chevron-double-right" : "mdi-chevron-double-left");
         fold.addEventListener("click", o.onFold);
         nav.appendChild(cameraNavHead(o.pinned, o.folded, fold, o.onPin));
-        cameraPageGroupsFor(cameraCanDo).forEach(function (gr, gi) {
+        cameraPageNavGroupsFor().forEach(function (gr, gi) {
           var gt = cameraEl("div", "", i18nT(gr.label));
           gt.className = "wf-nav-group st-group ctl-nav-group"; // st-group: the family takes the border off the first one
           gt.setAttribute("data-group", String(gi));
@@ -122,20 +133,28 @@
           gr.ids.forEach(function (id) {
             var label = cameraPageTabLabel(id);
             var count = cameraPageTabCount(id, o.tls, o.caps);
+            var need = cameraPageTabNeed(id, cameraCanDo);
+            var out = !!need && cameraSignedOut();
             var b = cameraEl("button", "");
-            b.className = "wf-nav-item ctl-nav-item" + (o.tab === id ? " on" : "");
+            b.className = "wf-nav-item ctl-nav-item" + (o.tab === id ? " on" : "") + (need ? " st-locked" + (out ? " st-locked-session" : "") : "");
             b.type = "button";
-            b.title = label + (count ? " (" + count + ")" : "");
-            b.appendChild(cameraEl("span", "")).className = "wf-nav-icon mdi " + cameraPageTabIcon(id);
-            b.appendChild(cameraEl("span", null, label)).className = "tx";
+            b.title = need ? label + ": " + (out ? i18nT("notice.notice_session_reason") : i18nT("notice.notice_role_needed", { needed: workshopNoticeRoleName(need) })) : label + (count ? " (" + count + ")" : "");
+            var box = cameraEl("span", ""); // the real icon always; a locked tab gets a small lock on its corner (same as the side bar of the Vue pages)
+            box.className = "st-iconbox";
+            box.appendChild(cameraEl("span", "")).className = "wf-nav-icon mdi " + cameraPageTabIcon(id);
+            if (need) box.appendChild(cameraEl("span", "")).className = "st-lockmark mdi " + (out ? "mdi-account-lock" : "mdi-lock");
+            b.appendChild(box);
+            var txt = cameraEl("span", ""); // the name, and under it who may open the tab; not drawn when the bar is folded
+            txt.className = "st-text";
+            txt.appendChild(cameraEl("span", null, label)).className = "tx";
+            if (need) txt.appendChild(cameraEl("span", null, out ? i18nT("notice.need_session_tag") : workshopNoticeRoleName(need))).className = "st-need";
+            b.appendChild(txt);
             if (count) b.appendChild(cameraEl("span", null, count)).className = "st-badge ctl-nav-count";
             b.addEventListener("click", function () { o.onTab(id); });
             nav.appendChild(b);
           });
         });
-        var hiddenNote = cameraPageHiddenNote(cameraCanDo, cameraSignedOut(), cameraRoleLabel(), i18nT, typeof cameraStateNow === "function" ? cameraStateNow() : "");
-        if (hiddenNote) nav.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "section", { text: hiddenNote, action: "" }));
-        return nav;
+        return nav; // no general note: each locked tab says why when it is opened (a cover), and the bar shows the lock and the role it needs
       }
 
       // To the page of the plugin, on a tab (the Live tab holds the capture and the timelapse): the route is pushed through the host; without a

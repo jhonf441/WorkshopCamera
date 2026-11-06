@@ -49,5 +49,5 @@
           /* live */
         }
         wanted = cameraPageTabMigrate(wanted);
-        return cameraPageTabsFor(cameraCanDo).indexOf(wanted) >= 0 ? wanted : "live";
+        return cameraPageTabsFor(function () { return true; }).indexOf(wanted) >= 0 ? wanted : "live"; // a locked tab stays open: its cover says why
       }

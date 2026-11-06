@@ -1,5 +1,11 @@
 # WorkshopCamera (Camera and timelapses)
 
+<!-- notice:start -->
+> **Read before installing.** This plugin runs with real permissions on your machine. Read [SECURITY.md](SECURITY.md) and the section **Permissions and what it changes** below: they say what it can do, which files it writes, and what it sends outside your network (nothing, unless you turn a feature on).
+
+> **The Workshop users and roles do not protect DWC itself.** Anyone who can open DWC on your network can send G-code, move the machine, edit `config.g` and upload files, whatever the Workshop roles say: Duet has no roles of its own. Set a DWC password (`M551`) and keep the machine on a network you trust.
+<!-- notice:end -->
+
 
 
 Two things in one plugin: (a) a floating camera viewer available on every DWC page (live video, photo capture with date, job and position, focus helper, flash / light, orientation, camera list, start / stop of the system relay and image profiles) and (b) the page `/Plugins/Timelapses` ("Timelapses and captures") that records timelapses of jobs or by hand, edits them, and manages videos and photos. Recording and video building are done by the System service (camera relay on port 8090 and `ffmpeg`; OpenCV is not needed).
@@ -283,7 +289,7 @@ Risk: **Low**. Read this before installing; the full document is `security.md` o
 - `ffmpeg` on the Pi (done by the service) for videos
 
 **Safety notes:**
-- The viewer and the relay follow the users of the service: with no users anyone on the network can watch the camera.
+- The viewer and the relay follow the users of the service: with no users anyone on the network can watch the camera, but only the Pi itself can change the camera settings until the first administrator exists.
 
 Uninstalling removes the plugin folder; your data in `0:/sys/workshop/` and `/opt/dsf/conf/workshop-*.json` stays.
 

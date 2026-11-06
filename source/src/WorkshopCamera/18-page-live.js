@@ -124,7 +124,14 @@
           }
           col.appendChild(cameraTlBox(function () { c.reload(); }, { noStart: tech })); // the state, Stop and build, the schedule; the operator also starts here
         }
-        cameraLiveExtras(col, c, cam);
+        if (c.state.liveCam === "all" && cameraList.length > 1) { // "All": the light, the focus and the profiles belong to ONE camera each: one titled block per camera
+          cameraLiveOrdered(cameraList).forEach(function (x) {
+            var blk = cameraEl("div", "display:flex;flex-direction:column;gap:8px;min-width:0;");
+            blk.appendChild(cameraEl("div", "font-weight:600;", x.name));
+            cameraLiveExtras(blk, c, x);
+            col.appendChild(blk);
+          });
+        } else cameraLiveExtras(col, c, cam);
         two.appendChild(col);
         page.appendChild(card);
         if (recording) live.open = false;

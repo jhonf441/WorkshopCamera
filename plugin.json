@@ -2,7 +2,7 @@
   "id": "WorkshopCamera",
   "name": "Camera",
   "author": "jhonf441",
-  "version": "2.13.15",
+  "version": "2.13.16",
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/jhonf441/WorkshopCamera",
   "tags": [
@@ -17,7 +17,7 @@
   "data": {},
   "sdFiles": [],
   "dwcFiles": [
-    "js/WorkshopCamera.430934b0.js",
-    "js/WorkshopCamera.430934b0.js.gz"
+    "js/WorkshopCamera.2cd685ea.js",
+    "js/WorkshopCamera.2cd685ea.js.gz"
   ]
 }

@@ -92,7 +92,7 @@
         var pestana = cameraGalleryTab(CAMERA_PAGE_TAB_KEY); // 13-service-views.js (an id of the 7 tabs of before is moved to its section)
         try { localStorage.setItem(CAMERA_PAGE_TAB_KEY, pestana); } catch (e) { /* the page opens on the tab it had */ }
         var pageState = {}; // what the tabs of cameras and image keep between redraws (18-page-cameras.js); cameraPageForget empties it
-        var cfg = null, borrador = null; // ajustes del servicio
+        var cfg = null, borrador = null, drawn = cameraDrawnTracker(), thumbs = {}; // ajustes del servicio; drawn: what the page was last drawn from; thumbs: the thumbnails already loaded (by address)
         function loadCfg() {
           return cameraService(null)
             .then(function (c) {
@@ -106,13 +106,13 @@
             .then(render);
         }
 
-        function load() {
+        function load(onlyIfChanged) {
           return cameraGalleryLoad(true).then(function (g) {
             pb = g.perDelete;
             tls = g.timelapses;
             caps = g.captures; est = g.state; whyFail = g.why || {};
             return tls === null && caps === null ? cameraNoCameraProbe() : false;
-          }).then(function (none) { noCam = !!none; render(); });
+          }).then(function (none) { noCam = !!none; if (drawn.changed(onlyIfChanged, cameraPageSignature(tls, caps, est, noCam))) render(); }); // the 3 s poll draws only when what the page shows changed
         }
         function notice(t, ok, quiet) { // quiet: do not draw the page now (a load that draws it follows): one redraw, not two
           msg = t || "";
@@ -301,7 +301,7 @@
             b.className = "wf-tab" + (sub === o[0] ? " on" : "");
             b.setAttribute("role", "tab");
             b.setAttribute("aria-selected", sub === o[0] ? "true" : "false");
-            b.addEventListener("click", function () { sub = o[0]; render(); });
+            b.addEventListener("click", function () { sub = o[0]; viendo = null; render(); }); // CA-3: the viewer of a file does not stay over another list
             tabsEl.appendChild(b);
           });
           page.appendChild(tabsEl);
@@ -363,11 +363,7 @@
         function card(kind, x) {
           var c = cameraEl("div", "");
           c.className = "ctl-mini" + (sel[x.file] ? " sel" : "");
-          var im = cameraEl("img", "width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#000;cursor:pointer;");
-          im.src = kind === "video" ? cameraRelayThumbUrl(x) : cameraRelayMediaUrl("photo", x.file);
-          im.loading = "lazy";
-          cameraOwnError(im); // appended below: the note needs the parent
-          im.addEventListener("click", function () {
+          var im = cameraThumbEl(thumbs, kind === "video" ? cameraRelayThumbUrl(x) : cameraRelayMediaUrl("photo", x.file), function () { // 18-page-library.js: a thumbnail that loaded is put back, not made again
             if (multi) { // choosing several: a tap chooses the card
               sel[x.file] = !sel[x.file];
               render();
@@ -478,7 +474,7 @@
           f2.appendChild(s);
           box.appendChild(f2);
           box.appendChild(info);
-          box.appendChild(boton(i18nT('gallery.create_the_edited_video'), "background:#1976d2;color:#fff;", function () {
+          box.appendChild(boton(i18nT('gallery.create_the_edited_video'), "background:#1976d2;color:#fff;align-self:flex-start;", function () { // flex-start: in this column it stretched to the whole width
             if (e.until !== null && e.until <= e.since + 0.2) return notice(i18nT('gallery.the_end_has_to_be_after'), false);
             cameraRelayEdit(x.file, e).then(function (d) {
               notice(d.ok ? i18nT('gallery.the_system_is_building_the_edited') : i18nT('common.couldn_t_error', { error: d.error || "" }), d.ok);
@@ -491,14 +487,15 @@
 
         load();
         loadCfg();
-        var busyBefore = false; var offIdentity = cameraGalleryOnIdentity(page, function () { load(); loadCfg(); });
+        var busyBefore = false; var answers = cameraAnswersTracker(); var offIdentity = cameraGalleryOnIdentity(page, function () { load(); loadCfg(); });
         timer = cameraGalleryPoll(function (d) {
           est = d || est;
           var t = d && d.timelapse;
           var busy = !!(t && (t.recording || t.assembling || t.editing));
           // algo cambia en la Pi, o recien termino de armarse un video
           var held = pestana === "library" ? cameraLibraryBusy(viendo, Object.keys(sel).filter(function (k) { return sel[k]; }).length) : !!(pageState.live && pageState.live.open); // the form of the timelapse is open
-          if ((busy || busyBefore) && cameraPageReloads(pestana, held)) load(); // the tabs that hold what is being typed (or a player, or a selection) are not redrawn
+          // a camera that stops (or starts) answering changes what the Live tab allows (the buttons are grey with the reason): drawn once, at the change
+          var ch = answers.changed(est && est.cameras); if ((busy || busyBefore || ch) && cameraPageReloads(pestana, held)) load(!ch); // the tabs that hold what is being typed (or a player, or a selection) are not redrawn; a poll with nothing new does not draw
           busyBefore = busy;
         });
         return cameraGalleryHandle(page, function () { clearInterval(timer); if (offIdentity) offIdentity(); });

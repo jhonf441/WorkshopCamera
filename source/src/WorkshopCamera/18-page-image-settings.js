@@ -49,7 +49,26 @@
         I.holder.appendChild(cameraEl("div", "color:" + color + ";", I.data.reachable ? i18nT('settings.camera_connected') : i18nT('settings.the_camera_isn_t_responding_off')));
         cameraImageProfiles(I);
         cameraImageFine(I);
-        if (I.msg) I.holder.appendChild(cameraEl("div", "color:var(--c-amber,#ffe082);", I.msg));
+        cameraImageSay(I);
+      }
+
+      // A2c: the message line of the card ("applying...", "done", the refusal) is ONE element that stays: saying something does not build the card again.
+      // Before, every tap on a profile drew the card twice (once to say "applying", once with the answer), each time emptying and building every chip and
+      // slider, and a camera that did not respond made it flash on every tap.
+      function cameraImageSay(I) {
+        if (!I.line) I.line = cameraEl("div", "color:var(--c-amber,#ffe082);");
+        I.line.textContent = I.msg || "";
+        I.line.style.display = I.msg ? "" : "none";
+        if (I.data && I.line.parentNode !== I.holder) I.holder.appendChild(I.line);
+      }
+
+      // While the camera is being asked the card says so and cannot be tapped again, without being drawn again.
+      function cameraImageBusy(I, on) {
+        [I.holder, I.profs].forEach(function (h) {
+          h.style.opacity = on ? "0.6" : "";
+          h.style.pointerEvents = on ? "none" : "";
+          h.setAttribute("aria-busy", on ? "true" : "false");
+        });
       }
 
       // Asks the service to apply and save a change ({profile}, {settings}, {auto}); the answer says how the camera is now
@@ -57,7 +76,9 @@
         if (I.busy) return;
         I.busy = true;
         I.msg = i18nT('settings.applying');
-        cameraImagePaint(I);
+        var before = JSON.stringify(I.data);
+        cameraImageBusy(I, true);
+        cameraImageSay(I);
         cameraImageSet(I.cam, patch)
           .then(function (d) {
             if (d && d.ok) {
@@ -72,7 +93,9 @@
           })
           .then(function () {
             I.busy = false;
-            cameraImagePaint(I);
+            cameraImageBusy(I, false);
+            if (JSON.stringify(I.data) !== before) cameraImagePaint(I); // the camera answered with a new state: the card is built once with it
+            else cameraImageSay(I); // a refusal or no answer: only the line changes, the card stays as it was
           });
       }
 

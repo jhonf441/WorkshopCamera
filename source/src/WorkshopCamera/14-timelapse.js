@@ -117,9 +117,8 @@
               nombre = inp.value;
             });
             row.appendChild(inp);
-            row.appendChild(
-              cameraBtn(busy ? i18nT('timelapse.starting') : i18nT('timelapse.start_now'), "background:#1976d2;color:#fff;", function () {
-                if (busy) return;
+            var startBtn = cameraBtn(busy ? i18nT('timelapse.starting') : i18nT('timelapse.start_now'), "background:#1976d2;color:#fff;", function () {
+                if (busy || startBtn.disabled) return;
                 busy = true;
                 notice = "";
                 paint();
@@ -136,9 +135,10 @@
                     return cameraStateRead();
                   })
                   .then(paint);
-              })
-            );
+              });
+            row.appendChild(startBtn);
             if (!noStart) box.appendChild(row);
+            cameraAvailLock(startBtn, cameraAnyAvailability(cameraState && cameraState.cameras), noStart ? null : box); // A10: no camera responds -> grey, with the reason below
             if (!noStart) box.appendChild(cameraEl("div", "font-size:11px;color:var(--c-sec,#b0bec5);", i18nT('timelapse.by_hand_records_with_the_cameras')));
             if (tl.disk_free_gb != null)
               box.appendChild(cameraEl("div", "font-size:11px;color:" + (tl.disk_free_gb < 4 ? "var(--c-notice,#ffb74d)" : "var(--c-sec,#b0bec5)") + ";",
@@ -448,7 +448,17 @@
         more.appendChild(link);
         box.appendChild(more);
         var acts = cameraEl("div", "display:flex;gap:8px;flex-wrap:wrap;");
-        if (f.when !== "schedule") acts.appendChild(cameraBtn(i18nT(f.when === "job" ? 'live.save_job_mode' : 'live.start'), "background:#1976d2;color:#fff;", function () { o.onStart(); }));
+        // A10: starting by hand needs a camera that responds (saving the "with every job" mode does not): grey with the reason written below
+        var blocked = f.when === "now" && !!o.startBlock;
+        if (f.when !== "schedule") {
+          var go = cameraBtn(i18nT(f.when === "job" ? 'live.save_job_mode' : 'live.start'), "background:#1976d2;color:#fff;", function () {
+            if (go.disabled) return;
+            go.disabled = true; go.setAttribute("aria-busy", "true"); go.textContent = i18nT('timelapse.starting'); // received: said at once
+            o.onStart();
+          });
+          acts.appendChild(go);
+          if (blocked) cameraAvailLock(go, { ok: false, reason: o.startBlock }, box);
+        }
         acts.appendChild(cameraBtn(i18nT('common.cancel'), "", function () { o.onCancel(); }));
         box.appendChild(acts);
         return box;

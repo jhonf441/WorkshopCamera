@@ -293,7 +293,7 @@
         // cameraStartModeFn (= startSnapshotMode) to start again,
         // always in photo mode, the next time it is opened.
         cameraStopStreamFn = function () {
-          liveMode = false; cameraLiveId = null;
+          cameraFlashesOff(); liveMode = false; cameraLiveId = null; // MO-7: the flash this page switched on does not stay on when the viewer closes or changes camera
           stopSnapshotMode();
           healthStop();
           if (connectTimeoutId) {

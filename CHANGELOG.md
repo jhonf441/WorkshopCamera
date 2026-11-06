@@ -1,5 +1,9 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.13.16 -- 2026-11-05
+
+- QA batch: a camera that does not answer cannot take an order, flash fix
+
 ## 2.13.15 -- 2026-11-05
 
 - Camera: All cameras grid reworked (aligned tiles, per-camera photo/video, draggable in place)

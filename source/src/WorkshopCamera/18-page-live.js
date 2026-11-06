@@ -27,24 +27,41 @@
       }
 
       // The profiles of the image as chips (the technician's: the service refuses camera.image.set to anyone else). One tap applies and saves it,
-      // as in the Image tab. Draws itself into `holder` once the service answers.
-      function cameraLiveProfiles(holder, cam, notify) {
+      // as in the Image tab. Draws itself into `holder`: at once from what was read last time (store.liveProfiles, kept while the person stays in the tab),
+      // and asks the service again only when that is older than 30 s, repainting only when the answer is different. Before, every draw of the tab left
+      // the holder empty until the service answered, so the section went out and came back at each redraw.
+      var CAMERA_LIVE_PROFILES_FRESH_MS = 30000;
+      function cameraLiveProfiles(holder, cam, notify, store) {
+        var cache = (store && (store.liveProfiles || (store.liveProfiles = {}))) || {};
+        var drawn = null;
+        function draw(d) {
+          var sig = JSON.stringify(d);
+          if (sig === drawn) return;
+          drawn = sig;
+          holder.textContent = "";
+          var plain = !Object.keys(d.settings || {}).length;
+          holder.appendChild(cameraEl("div", "font-size:12px;opacity:.7;margin-bottom:4px;", i18nT('live.image')));
+          var chips = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
+          d.profiles.forEach(function (p) {
+            var on = d.profile === p.id && plain;
+            var c = cameraBtn(cameraProfileInfo(p.id)[0], on ? "border:1px solid #1976d2;" : "", function () {
+              cameraImageSet(cam.id, { profile: p.id }).then(function (r) {
+                delete cache[cam.id]; // what the camera has changed: the next draw reads it again
+                notify(r && r.ok ? i18nT('live.profile_applied', { name: cameraProfileInfo(p.id)[0] }) : i18nT('settings.the_camera_didn_t_respond_is_it_on', { error: (r && r.error) || "" }), !!(r && r.ok));
+              });
+            });
+            chips.appendChild(c);
+          });
+          holder.appendChild(chips);
+        }
+        var hit = cache[cam.id];
+        if (hit) draw(hit.d);
+        if (hit && Date.now() - hit.at < CAMERA_LIVE_PROFILES_FRESH_MS) return;
         cameraImageGet(cam.id)
           .then(function (d) {
-            if (!d || !d.ok || !holder.isConnected) return;
-            var plain = !Object.keys(d.settings || {}).length;
-            holder.appendChild(cameraEl("div", "font-size:12px;opacity:.7;margin-bottom:4px;", i18nT('live.image')));
-            var chips = cameraEl("div", "display:flex;gap:6px;flex-wrap:wrap;");
-            d.profiles.forEach(function (p) {
-              var on = d.profile === p.id && plain;
-              var c = cameraBtn(cameraProfileInfo(p.id)[0], on ? "border:1px solid #1976d2;" : "", function () {
-                cameraImageSet(cam.id, { profile: p.id }).then(function (r) {
-                  notify(r && r.ok ? i18nT('live.profile_applied', { name: cameraProfileInfo(p.id)[0] }) : i18nT('settings.the_camera_didn_t_respond_is_it_on', { error: (r && r.error) || "" }), !!(r && r.ok));
-                });
-              });
-              chips.appendChild(c);
-            });
-            holder.appendChild(chips);
+            if (!d || !d.ok) return;
+            cache[cam.id] = { at: Date.now(), d: d };
+            if (holder.isConnected) draw(d);
           })
           .catch(function () { /* the Image tab says what is wrong */ });
       }
@@ -55,7 +72,7 @@
         if (live.when === "job") c.draft.timelapse.active = true;
         var changed = JSON.stringify(c.cfg) !== JSON.stringify(c.draft);
         var saved = changed ? cameraService(c.draft).then(function (r) { c.saved(r); }) : Promise.resolve();
-        c.notice(i18nT('common.saving'));
+        c.notice(i18nT('common.saving'), true, true); // quiet: the form button already says it started, and every draw of this tab asks the camera again
         saved
           .then(function () {
             if (live.when === "job") return { ok: true, saved: true };
@@ -63,7 +80,7 @@
           })
           .then(function (d) {
             if (d.ok) { live.open = false; live.name = ""; }
-            c.notice(d.ok ? (d.saved ? i18nT('common.settings_saved_on_the_system_they') : i18nT('studio.take_started')) : i18nT('common.couldn_t_error', { error: d.error || "" }), !!d.ok);
+            c.notice(d.ok ? (d.saved ? i18nT('common.settings_saved_on_the_system_they') : i18nT('studio.take_started')) : i18nT('common.couldn_t_error', { error: d.error || "" }), !!d.ok, true); // quiet: c.reload() below draws once
             return cameraStateRead();
           })
           .then(function () { c.reload(); })
@@ -115,7 +132,7 @@
           var fc = cameraEl("div", "");
           fc.className = "ctl-card wf-card";
           fc.appendChild(cameraTlForm({
-            t: c.draft.timelapse, rerender: c.rerender, form: live,
+            t: c.draft.timelapse, rerender: c.rerender, form: live, startBlock: cameraAnyAvailability(c.est && c.est.cameras).reason,
             onStart: function () { cameraLiveStart(c, live); },
             onCancel: function () { live.open = false; c.rerender(); },
             onSchedule: function () { live.open = false; c.reload(); },
@@ -137,15 +154,21 @@
         var cs = (c.est && c.est.cameras) || [];
         if (!cs.length || !cameraCanDo("capture")) return;
         cs.forEach(function (cam) {
-          col.appendChild(cameraBtn(cs.length > 1 ? i18nT('gallery.capture_now') + ": " + cam.name : i18nT('gallery.capture_now'), "background:#1976d2;color:#fff;min-height:44px;", function () {
+          var av = cameraAvailability(cam); // A10: a camera that does not respond keeps the button grey, with the reason written next to it
+          var label = cs.length > 1 ? i18nT('gallery.capture_now') + ": " + cam.name : i18nT('gallery.capture_now');
+          var b = cameraBtn(label, "background:#1976d2;color:#fff;min-height:44px;", function () {
+            if (b.disabled) return;
+            b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = i18nT('camera.capturing'); // the order was received: said at once, without drawing the page
             cameraRelayCapture(cam.id)
               .then(function (d) {
                 if (!d.ok) return c.notice(i18nT('common.couldn_t_error', { error: d.error || "" }), false);
-                c.notice(i18nT('gallery.capture_saved') + " " + cam.name);
+                c.notice(i18nT('gallery.capture_saved') + " " + cam.name, true, true); // quiet: the reload that follows draws the page once
                 c.reload();
               })
               .catch(function (e) { c.notice(i18nT('common.couldn_t_error', { error: String(e.message || e) }), false); });
-          }));
+          });
+          col.appendChild(b);
+          cameraAvailLock(b, av, col);
         });
       }
 
@@ -159,7 +182,7 @@
         if (cameraCanDo("cameras") && cam) {
           var profs = cameraEl("div", "");
           col.appendChild(profs);
-          cameraLiveProfiles(profs, cam, c.notice);
+          cameraLiveProfiles(profs, cam, c.notice, c.state);
         }
       }
 

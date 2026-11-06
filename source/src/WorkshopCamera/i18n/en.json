@@ -605,6 +605,8 @@
 		"notify_no": "No"
 	},
 	"live": {
+		"capture_unavailable": "The camera {name} does not respond: it cannot capture now. Check that it is on and connected.",
+		"timelapse_unavailable": "No camera responds: a timelapse cannot be recorded now. Check that they are on and connected.",
 		"lead": "Watch the camera, take a capture or record a timelapse.",
 		"record_timelapse": "Record timelapse",
 		"when": "When",

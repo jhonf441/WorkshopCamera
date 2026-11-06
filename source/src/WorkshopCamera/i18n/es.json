@@ -605,6 +605,8 @@
 		"notify_no": "No"
 	},
 	"live": {
+		"capture_unavailable": "La cámara {name} no responde: no se puede capturar ahora. Revisa que esté encendida y conectada.",
+		"timelapse_unavailable": "Ninguna cámara responde: no se puede grabar un timelapse ahora. Revisa que estén encendidas y conectadas.",
 		"lead": "Mira la cámara, saca una captura o graba un timelapse.",
 		"record_timelapse": "Grabar timelapse",
 		"when": "Cuándo",

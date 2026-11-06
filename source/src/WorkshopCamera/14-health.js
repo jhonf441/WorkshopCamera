@@ -53,6 +53,31 @@
         return null;
       }
 
+      // A10: can this camera of the relay take an order (capture, record) now? The relay's own numbers decide (cameraHealthFromRelay): a camera that does not
+      // respond ("down") cannot, and the button stays grey with the reason written next to it. A camera whose state is not known yet is allowed: the page never
+      // blocks by guessing. -> { ok, reason }
+      function cameraAvailability(cam) {
+        if (!cam) return { ok: true, reason: "" };
+        var h = cameraHealthFromRelay(cameraStateOf(cam.id));
+        return h && h.state === "down" ? { ok: false, reason: i18nT('live.capture_unavailable', { name: cam.name || cam.id }) } : { ok: true, reason: "" };
+      }
+
+      // A10: grey `btn` with the reason as its title and, when `parent` is given, the reason written under it (a disabled button shows no tooltip on touch).
+      function cameraAvailLock(btn, av, parent) {
+        if (av.ok) return;
+        btn.disabled = true;
+        btn.title = av.reason;
+        if (parent) parent.appendChild(cameraEl("div", "", av.reason)).className = "ctl-muted";
+      }
+
+      // A timelapse needs at least one camera that responds (the ones that do not are left out of it and named in an amber note). cams = the cameras of the
+      // relay (default: all of them); with no list there is nothing to judge. -> { ok, reason }
+      function cameraAnyAvailability(cams) {
+        cams = cams || (cameraState && cameraState.cameras) || [];
+        if (!cams.length) return { ok: true, reason: "" };
+        return cams.some(function (x) { return cameraAvailability(x).ok; }) ? { ok: true, reason: "" } : { ok: false, reason: i18nT('live.timelapse_unavailable') };
+      }
+
       // {state, since_s} from the facts f at the time now (ms). The order is the order of certainty: a request that failed, what the relay says,
       // no picture at all, a black picture, a picture that stopped; the rest is fresh.
       function cameraHealthDecide(f, now) {

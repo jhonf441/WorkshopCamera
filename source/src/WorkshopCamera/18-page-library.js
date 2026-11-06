@@ -5,6 +5,23 @@
 
       var CAMERA_LIBRARY_SUBS = ["all", "video", "photo", "keep"];
 
+      // A2b: the thumbnail of a card. Every draw of the library made a new <img> for each card, and an image that has to load again shows a blank frame:
+      // changing the second level tab or any redraw flickered all the pictures. An image that already loaded fine is taken from `cache` (by address) and
+      // moved into the new card; only its click is set again (the card it belongs to is new). One that failed or is still loading is made anew, so its note
+      // ("no picture") is drawn in the card that is on screen. -> the <img>
+      function cameraThumbEl(cache, src, onClick) {
+        var im = cache[src];
+        if (!(im && im.complete && im.naturalWidth > 0)) {
+          im = cameraEl("img", "width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#000;cursor:pointer;");
+          im.src = src;
+          im.loading = "lazy";
+          cameraOwnError(im); // appended by the caller: the note needs the parent
+          cache[src] = im;
+        }
+        im.onclick = onClick;
+        return im;
+      }
+
       // Pure. "all" when the id is not one of the second level tabs.
       function cameraLibrarySub(id) {
         return CAMERA_LIBRARY_SUBS.indexOf(id) >= 0 ? id : "all";

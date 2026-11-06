@@ -261,20 +261,31 @@
 
       // Switches the flash of a camera of the list: the SERVICE does it (camera.flash: the camera's LED or the work lights, as the camera's flash_source
       // says) and remembers it; this only asks and keeps the answer in the camera record. Resolves {ok, error?, flash?}; never rejects.
-      function cameraFlashSet(camera, on) {
-        return workshopApi("camera.flash", { camera: camera.id, on: !!on }).then(
+      var cameraFlashMine = {}; // MO-7: the lights THIS page switched on and has not switched off yet (camera id -> camera)
+      function cameraFlashSet(camera, on, opts) {
+        return workshopApi("camera.flash", { camera: camera.id, on: !!on }, opts).then(
           function (r) {
             if (r && r.flash) {
               camera.flash = r.flash;
               var state = cameraStateOf(cameraRelayId(camera)); // the state of the relay read when the viewer opened must not say the old one
               if (state) state.flash = r.flash;
             }
+            if (r && r.ok !== false) { if (on) cameraFlashMine[camera.id] = camera; else delete cameraFlashMine[camera.id]; }
             return r || { ok: false, error: "" };
           },
           function (e) {
             return { ok: false, error: String(e && e.message ? e.message : e) };
           }
         );
+      }
+
+      // MO-7: the flash this page switched on goes off when the page stops looking: the viewer closes (or changes camera), the plugin stops, the tab is
+      // closed or reloaded (unloading: the request outlives the page). The service also switches it off when nobody looks, but a viewer in photo mode
+      // asks for a picture every 3 s and never opens the video, so the service cannot tell that it was closed. Fire and forget: it never rejects.
+      function cameraFlashesOff(unloading) {
+        Object.keys(cameraFlashMine).forEach(function (id) {
+          cameraFlashSet(cameraFlashMine[id], false, { quiet: true, keepalive: !!unloading });
+        });
       }
 
       // Pill over a picture that says what is on screen: returns set(live, h). live = the mode chosen (live video or a photo that refreshes);

@@ -64,7 +64,13 @@
       var CAMERA_OWN_STYLES = ["workshop-tl-css", "workshop-studio-css"];
       workshopOwnStyles(CAMERA_OWN_STYLES);
 
+      // MO-7: a reload or closing the tab does not run the plugin's stop: the flash this page switched on is switched off with a request that outlives the page
+      function cameraOnPageHide() { cameraFlashesOff(true); }
+      window.addEventListener("pagehide", cameraOnPageHide);
+
       workshopOnStop(function () {
+        window.removeEventListener("pagehide", cameraOnPageHide);
+        cameraFlashesOff();
         if (cameraStopStreamFn) cameraStopStreamFn();
         cameraCloseOpenViews(); // 13-service.js: the mosaic and the page, with their timers
         cameraViewTeardown(null); // every view: the cover boxes and the judgement of every picture (14-health.js) go with it

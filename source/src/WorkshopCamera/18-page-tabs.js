@@ -76,6 +76,26 @@
         return true;
       }
 
+      // Pure. What the page shows, as a short text: the two lists and the parts of the state that change what is drawn. The 3 s reload during a recording
+      // draws the page again only when this changes: a new saved photo of the recording (frames: the grid of the Live tab shows the last one) or a list that changed, not every 3 s.
+      function cameraPageSignature(tls, caps, est, noCam) {
+        var t = (est && est.timelapse) || {};
+        return JSON.stringify([tls, caps, !!noCam, !!t.recording, !!t.assembling, !!t.editing, t.job || "", t.error || "", t.frames || 0, (est && est.cameras || []).map(function (c) { return c.id; })]);
+      }
+
+      // What the page was last drawn from. changed(onlyIfChanged, sig): true when the page has to be drawn (always, unless onlyIfChanged === true and the
+      // signature is the same as the last one); it remembers the signature either way.
+      function cameraDrawnTracker() {
+        var last = null;
+        return { changed: function (onlyIfChanged, sig) { var same = last === sig; last = sig; return !(onlyIfChanged === true && same); } };
+      }
+
+      // Which cameras answer: changed(cams) is true when one stops answering or answers again since the last call (cameraAvailability, 14-health.js). The first call is false.
+      function cameraAnswersTracker() {
+        var last = null;
+        return { changed: function (cams) { var k = (cams || []).map(function (c) { return c.id + ":" + (cameraAvailability(c).ok ? 1 : 0); }).join(","); var ch = last !== null && k !== last; last = k; return ch; } };
+      }
+
       // The state the tabs keep between redraws of the page (the camera being edited, the relay model...): leaving a tab or pressing Refresh drops it.
       function cameraPageForget(state) {
         Object.keys(state).forEach(function (k) { delete state[k]; });

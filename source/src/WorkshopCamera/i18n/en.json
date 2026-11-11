@@ -18,6 +18,7 @@
 		"could_not_capture": "Could not capture: {error}",
 		"zoom_out": "Zoom out",
 		"close_camera": "Close camera",
+		"resize_handle": "Drag to resize the viewer (the size is remembered on this screen)",
 		"open_page": "Open capture and timelapse",
 		"could_not_switch_the_flash": "The flash did not change."
 	},
@@ -415,6 +416,7 @@
 		"clock_missing": "Photos will carry the wrong date. Connect the Pi to the internet for a moment or set the time."
 	},
 	"roles": {
+	"change_role": "Change role",
 		"no_permission": "Your role ({role}) cannot see the camera. Ask an administrator to enable it for visitors.",
 		"cover_role": "Requires the {needed} role. Your role: {role}.",
 		"signed_out_camera": "Sign-in required to see the camera.",

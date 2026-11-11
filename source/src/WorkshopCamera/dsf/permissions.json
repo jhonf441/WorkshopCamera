@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "plugin": "WorkshopCamera",
+  "namespace": "camera",
+  "prefixes": [
+    "camera"
+  ],
+  "ui": "ui:camera:open",
+  "operations": [
+    "camera.burst",
+    "camera.capture",
+    "camera.detect",
+    "camera.edit",
+    "camera.flash",
+    "camera.image.get",
+    "camera.image.set",
+    "camera.keep",
+    "camera.remove",
+    "camera.rename",
+    "camera.rerender",
+    "camera.schedule",
+    "camera.service",
+    "camera.start",
+    "camera.status",
+    "camera.stop",
+    "camera.timelapse",
+    "camera.token",
+    "settings.set",
+    "vision.get"
+  ],
+  "shared": [
+    "settings.set",
+    "vision.get"
+  ],
+  "restricted": [],
+  "targets": [
+    "camera:camera",
+    "camera:media",
+    "camera:timelapse",
+    "vision:path"
+  ],
+  "profiles": {
+    "readonly": {
+      "title": "CameraReadOnly",
+      "capabilities": [
+        "camera.view"
+      ]
+    },
+    "operator": {
+      "title": "CameraOperator",
+      "capabilities": [
+        "camera.capture",
+        "camera.view",
+        "camera.vision"
+      ]
+    },
+    "admin": {
+      "title": "CameraAdmin",
+      "capabilities": [
+        "camera.capture",
+        "camera.manage",
+        "camera.relay",
+        "camera.settings",
+        "camera.view",
+        "camera.vision"
+      ]
+    }
+  },
+  "satellite": "camera_access.py (inside the service)"
+}

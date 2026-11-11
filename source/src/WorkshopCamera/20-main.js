@@ -17,6 +17,7 @@
           var denied = !cameraCanDo("view"); // a visitor without the camera: a clear message instead of an error (F3-C)
           return {
             open: open,
+            locked: cameraSessionLock(), // 09-camera-session.js: a session or a role is needed: the launcher shows a lock and signs in, nothing opens
             disabled: noPanel && !cameraSessionCause().kind, // with a cause the tile opens the cover that tells it
             statusText: denied
               ? cameraDenied()

@@ -74,13 +74,15 @@
           ".ctl-recover{border-radius:8px;background:rgba(128,128,128,0.07);padding:8px 12px;}",
           ".ctl-recover>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;}",
           ".ctl-rsteps{display:flex;flex-direction:column;gap:10px;padding-top:4px;}",
-          ".ctl-rstep{display:flex;flex-direction:column;gap:4px;font-size:13px;}",
+          ".ctl-rstep{display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0;}",
           ".ctl-rstep-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}",
           ".ctl-rnum{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--c-sec);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}",
           ".ctl-rhelp>summary{cursor:pointer;font-size:12px;color:var(--c-sec);min-height:28px;display:flex;align-items:center;}",
           ".ctl-rhelp>div{font-size:12px;padding-left:12px;}",
           ".ctl-rresult{font-size:12px;color:var(--c-amber);white-space:pre-wrap;}",
-          ".ctl-mono{font-family:monospace;font-size:12px;white-space:pre;padding:6px 8px;border-radius:6px;background:var(--c-interna);}",
+          // the commands to type at the system (step 7 of the help): they wrap inside the card and a long address breaks where it must, never past the
+          // edge of the panel (capture 2026-11-06); a line that still does not fit scrolls inside the block
+          ".ctl-mono{font-family:monospace;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%;box-sizing:border-box;overflow-x:auto;padding:6px 8px;border-radius:6px;background:var(--c-interna);}",
         ]);
         document.head.appendChild(st);
       }

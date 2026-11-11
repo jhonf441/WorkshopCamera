@@ -27,7 +27,12 @@
       // It stops its own pointer events so that the drag-to-move of the panel (makeDraggable) does not fire at the same time.
       function cameraResizeHandle(panel) {
         var handle = document.createElement("div");
-        handle.style.cssText = "position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.65) 50%);";
+        // on a touch screen the corner is a 36 px target (the drawing stays a small triangle); a mouse keeps the 22 px corner
+        var px = cameraIsTouch() ? 36 : 22;
+        handle.style.cssText = "position:absolute;right:0;bottom:0;width:" + px + "px;height:" + px + "px;cursor:nwse-resize;touch-action:none;z-index:1;" +
+          "background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.65) 50%) right bottom / 22px 22px no-repeat;";
+        handle.title = i18nT('camera.resize_handle');
+        handle.setAttribute("aria-label", i18nT('camera.resize_handle'));
         panel.appendChild(handle);
         var drag = null; // { id, x, y, w, h } while a finger or a mouse holds the corner
         handle.addEventListener("pointerdown", function (ev) {
@@ -201,48 +206,56 @@
         }).observe(panel);
       }
 
-      // The "Retry" button, centered: it ONLY appears when the live video mode fails (the photo mode retries by itself on its next tick).
+      // A touch screen (phone, tablet, kiosk): the main pointer is coarse. No user-agent sniffing.
+      function cameraIsTouch() {
+        try {
+          return !!window.matchMedia && window.matchMedia("(pointer: coarse)").matches === true;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      // The two buttons over a picture that is not alive (Retry, and the way to the help of the page), with the look of the family (DESIGN 3: the main one
+      // filled with the accent, radius 6, 32 px high; the other a gray outline) instead of the old pills. Where they sit is cameraNarrowIcons.
+      var CAMERA_OVER_BTN = "position:absolute;left:50%;box-sizing:border-box;min-height:32px;padding:0 14px;border-radius:6px;display:none;align-items:center;justify-content:center;gap:6px;" +
+        "font:500 13px/1 Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;cursor:pointer;touch-action:none;z-index:1;";
+
+      // The "Retry" button: it appears when the picture is not alive (the photo mode retries by itself on its next tick, the live video needs the tap).
       function cameraRetryButton() {
         var button = document.createElement("button");
         button.type = "button";
         button.textContent = i18nT('camera.retry');
-        button.style.cssText = [
-          "position:absolute",
-          "left:50%",
-          "top:50%",
-          "transform:translate(-50%,-50%)",
-          "padding:10px 16px",
-          "border-radius:20px",
-          "border:none",
-          "background:#1976d2",
-          "color:#fff",
-          "font-size:13px",
-          "white-space:nowrap",
-          "cursor:pointer",
-          "touch-action:none",
-          "z-index:1",
-          "display:none",
-        ].join(";");
+        button.style.cssText = CAMERA_OVER_BTN + "border:0;background:#1976d2;color:#fff;";
         return button;
       }
 
-      // Narrow viewer: Retry and the help button are round icons side by side (the words stay in the tooltip), so they never cover the picture or each other.
+      // Where Retry and the help button sit, and how they look at each width (owner report 2026-11-06: ugly, and in a small viewer they covered the
+      // little picture that was left). A wide viewer: the two stacked in the middle, with their words. A narrow one: round icons side by side at the
+      // BOTTOM of the viewer (above the row of round buttons), so the middle stays clear; the words stay in the tooltip.
+      // Pure: the geometry for a width. Returns { small, top, retryTransform, helpTransform, size }.
+      function cameraOverButtonsLayout(compact) {
+        if (compact) return { small: true, top: "auto", bottom: "36px", retryTransform: "translate(-110%,0)", helpTransform: "translate(10%,0)", size: "32px" };
+        return { small: false, top: "50%", bottom: "auto", retryTransform: "translate(-50%,-100%)", helpTransform: "translate(-50%,8px)", size: "" };
+      }
+
       function cameraNarrowIcons(panel, retry, help) {
         var ICON_RETRY = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4z"/></svg>';
         var ICON_HELP = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M11 18h2v-2h-2v2zm1-16a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm0-14a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>';
         var retryWords = retry.textContent, helpWords = help.textContent;
         retry.title = retryWords;
         function paint() {
-          var small = cameraIsCompact(panel);
-          retry.innerHTML = small ? ICON_RETRY : "";
-          if (!small) retry.textContent = retryWords;
-          help.innerHTML = small ? ICON_HELP : "";
-          if (!small) help.textContent = helpWords;
-          retry.style.padding = help.style.padding = small ? "0" : "";
-          retry.style.width = retry.style.height = help.style.width = help.style.height = small ? "32px" : "";
-          retry.style.borderRadius = help.style.borderRadius = small ? "50%" : "";
-          retry.style.transform = small ? "translate(-120%,-50%)" : "translate(-50%,-50%)";
-          help.style.transform = small ? "translate(20%,-50%)" : "translate(-50%,28px)";
+          var L = cameraOverButtonsLayout(cameraIsCompact(panel));
+          retry.innerHTML = L.small ? ICON_RETRY : "";
+          if (!L.small) retry.textContent = retryWords;
+          help.innerHTML = L.small ? ICON_HELP : "";
+          if (!L.small) help.textContent = helpWords;
+          retry.style.padding = help.style.padding = L.small ? "0" : "";
+          retry.style.width = retry.style.height = help.style.width = help.style.height = L.size;
+          retry.style.borderRadius = help.style.borderRadius = L.small ? "50%" : "";
+          retry.style.top = help.style.top = L.top;
+          retry.style.bottom = help.style.bottom = L.bottom;
+          retry.style.transform = L.retryTransform;
+          help.style.transform = L.helpTransform;
         }
         paint();
         panel.addEventListener("camera-compact", paint);
@@ -386,7 +399,7 @@
         b.type = "button";
         b.title = i18nT('camera.recover_help');
         b.textContent = i18nT('camera.recover_help');
-        b.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,28px);padding:6px 12px;border-radius:14px;border:1px solid rgba(255,255,255,0.6);background:rgba(0,0,0,0.6);color:#fff;font:12px Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;cursor:pointer;touch-action:none;z-index:1;display:none;";
+        b.style.cssText = CAMERA_OVER_BTN + "border:1px solid rgba(255,255,255,0.5);background:rgba(0,0,0,0.6);color:#fff;";
         panel.appendChild(b);
         b.addEventListener("pointerdown", function (ev) {
           ev.stopPropagation();

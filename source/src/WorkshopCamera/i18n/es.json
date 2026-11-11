@@ -18,6 +18,7 @@
 		"could_not_capture": "No se pudo capturar: {error}",
 		"zoom_out": "Alejar",
 		"close_camera": "Cerrar cámara",
+		"resize_handle": "Arrastra para cambiar el tamaño del visor (se recuerda en esta pantalla)",
 		"open_page": "Abrir captura y timelapse",
 		"could_not_switch_the_flash": "El flash no cambió."
 	},
@@ -415,6 +416,7 @@
 		"clock_missing": "Las fotos saldrán con fecha equivocada. Conecta la Pi a internet un momento o ajusta la hora."
 	},
 	"roles": {
+	"change_role": "Cambiar rol",
 		"no_permission": "Tu rol ({role}) no puede ver la cámara. Pide a un administrador que la active para visitas.",
 		"cover_role": "Requiere el rol {needed}. Tu rol: {role}.",
 		"signed_out_camera": "Requiere iniciar sesión para ver la cámara.",

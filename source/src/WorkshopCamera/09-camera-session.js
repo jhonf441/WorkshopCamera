@@ -5,10 +5,31 @@
       // identity ("full" for workshopIdentityView(null)) nor from an "na" list; every change of identity (09-session-change.js) drops what the previous
       // person read (panel, list, day key) and builds again, by itself: signing in shows the image without a reload and without tapping Retry.
       // Where the panel would be there is a cover (N4) while the camera cannot be shown; the launcher tile opens it.
+      // Owner rule (2026-11-06, capture 9): without a session (or with a role that has no camera) NOTHING opens from the launcher: the launcher of the
+      // bar shows a lock with the reason and its tap signs in (cameraSessionLock / cameraSessionLockTap). The cover for those two causes is shown
+      // only when the viewer was OPEN and the permission went away (a sign-out, another person): then it takes the place of the viewer, same spot
+      // and size, with the reason and the sign-in button. The causes that are not about the person (down, empty, loading) keep the cover from the tile.
 
       var CAMERA_SESSION_COVER_ID = "workshop-camera-cover";
       var cameraSessionCoverOpen = false; // the person wants the panel and it cannot show yet (it was open when the session ended, or the tile was tapped)
+      var cameraSessionCoverAt = null; // { left, top, width, height } of the viewer that was open when the permission went away: the cover takes its place
       var cameraSessionSeq = 0; // a late answer of an older build (another identity) does nothing
+
+      // Pure: the lock of the launcher for a cause ({ kind: "session" } / { kind: "role", needed } or null when nothing about the person blocks it)
+      function cameraSessionLockOf(cause) {
+        if (!cause || (cause.kind !== "session" && cause.kind !== "role")) return null;
+        return cause.kind === "session" ? { kind: "session" } : { kind: "role", needed: cause.needed || "operator" };
+      }
+
+      function cameraSessionLock() {
+        if (pluginStopped) return null;
+        return cameraSessionLockOf(cameraSessionCause());
+      }
+
+      // The tap on a locked launcher (the bar, or the fallback button without a bar): the name + PIN dialog; a sign-in builds the viewer by itself
+      function cameraSessionLockTap() {
+        if (typeof workshopLogin === "function") workshopLogin();
+      }
 
       // Pure: what blocks the camera. f = { known, canView, signedOut, address (cameraAddressState), hasUrl }.
       // Returns { kind: "loading" | "session" | "role" | "down" | "empty" | "" } ("" = it can be built).
@@ -39,18 +60,47 @@
         var title = i18nT("main.camera");
         if (cause.kind === "empty") return workshopNoticeEl("empty", "cover", { title: title, text: i18nT("main.no_camera_yet_add_the_first_one") });
         if (cause.kind === "loading") return workshopNoticeEl("empty", "cover", { title: title, text: i18nT("main.loading") });
-        return workshopNoticeEl(cause.kind, "cover", {
+        var box = workshopNoticeEl(cause.kind, "cover", {
           needed: cause.needed,
           text: cause.kind === "role" ? cameraSessionRoleText(cause.needed) : undefined, // the sentence of the camera (09-camera-session-wait.js)
           onRetry: function () {
             cameraRebuild("retry");
           },
         });
+        // a role without the camera: the cover that blocks the open viewer offers the way out too (owner rule 2026-11-06): another person signs in
+        if (cause.kind === "role" && typeof document !== "undefined" && typeof document.createElement === "function") {
+          var change = document.createElement("button");
+          change.type = "button";
+          change.className = "wf-btn";
+          change.textContent = i18nT("roles.change_role");
+          change.addEventListener("click", cameraSessionLockTap);
+          box.appendChild(change);
+        }
+        return box;
       }
 
       function cameraSessionCoverRemove() {
         var old = document.getElementById(CAMERA_SESSION_COVER_ID);
         if (old) old.remove();
+      }
+
+      // Pure: where the cover goes. at = the rect of the viewer that lost its permission (null: none was open), win = { vw, vh }, margin.
+      // In the place of the viewer when there was one (never off the window); else the bottom right corner, as before.
+      function cameraSessionCoverPlace(at, win, margin) {
+        if (!at || !(at.width > 0) || !(at.height > 0) || !win || !(win.vw > 0) || !(win.vh > 0)) return null;
+        var fit = function (v, min, max) { return max < min ? min : Math.min(Math.max(v, min), max); };
+        var w = Math.min(at.width, win.vw - 2 * margin);
+        var h = Math.min(at.height, win.vh - 2 * margin);
+        return {
+          left: Math.round(fit(at.left, margin, win.vw - w - margin)),
+          top: Math.round(fit(at.top, margin, win.vh - h - margin)),
+          width: Math.round(w),
+          height: Math.round(h),
+        };
+      }
+
+      function cameraSessionCoverWin() {
+        return typeof window !== "undefined" ? { vw: window.innerWidth, vh: window.innerHeight } : null;
       }
 
       // Paints (or removes) the cover for the cause of now
@@ -65,28 +115,59 @@
           box = document.createElement("div");
           box.id = CAMERA_SESSION_COVER_ID;
           box.setAttribute("data-tp-panel", "1");
+          box.setAttribute("data-workshop-float", "1"); // a floating widget like the viewer (the Jog hides them in its full screen)
+          // it hangs from <body>: DWC's font does not reach it, so the family's sans is written here (a serif cover was the capture of 2026-11-06)
           box.style.cssText =
             "position:fixed;right:12px;bottom:12px;z-index:2147482000;box-sizing:border-box;width:min(360px,92vw);padding:8px;border-radius:10px;" +
+            "display:flex;flex-direction:column;overflow:auto;font:13px/1.4 Roboto,Helvetica,Arial,sans-serif;color:#eceff1;" +
             "background:var(--wf-surface,#1e1e1e);border:1px solid var(--wf-line,rgba(128,128,128,0.3));box-shadow:0 4px 14px rgba(0,0,0,0.5);";
           document.body.appendChild(box);
+        }
+        // the viewer lost its permission while open: the cover takes its place (same spot and size) instead of a box in a corner
+        var place = cameraSessionCoverPlace(cameraSessionCoverAt, cameraSessionCoverWin(), typeof MARGIN === "number" ? MARGIN : 8);
+        if (place) {
+          box.style.right = "auto";
+          box.style.bottom = "auto";
+          box.style.left = place.left + "px";
+          box.style.top = place.top + "px";
+          box.style.width = place.width + "px";
+          box.style.height = place.height + "px";
         }
         box.textContent = "";
         var close = document.createElement("button");
         close.type = "button";
         close.className = "wf-btn";
         close.textContent = i18nT("common.close");
-        close.style.cssText = "display:block;margin:0 0 6px auto;";
+        close.style.cssText = "flex:none;display:block;margin:0 0 6px auto;";
         close.addEventListener("click", function () {
           cameraSessionCoverOpen = false;
+          cameraSessionCoverAt = null;
+          if (cameraSessionLockOf(cause)) cameraSessionCoverForget(); // closed by hand: the viewer does not pop up by itself after the next sign-in
           cameraSessionCoverRender();
           workshopNotify();
         });
         box.appendChild(close);
-        box.appendChild(cameraSessionCoverContent(cause));
+        var content = cameraSessionCoverContent(cause);
+        if (content.style) {
+          content.style.flex = "1 1 auto";
+          content.style.minHeight = "0";
+        }
+        box.appendChild(content);
       }
 
-      // The launcher tile while there is no panel: it opens or closes the cover
+      // The person closed the cover of a session / role lock: the viewer is not wanted open any more on this screen
+      function cameraSessionCoverForget() {
+        try {
+          localStorage.setItem(typeof CAMERA_EXPANDED_KEY === "string" ? CAMERA_EXPANDED_KEY : "workshopCameraExpanded", "0");
+        } catch (e) {
+          /* not remembered: it only pops up again after the next sign-in */
+        }
+      }
+
+      // The launcher tile while there is no panel: it opens or closes the cover (never for a session or role cause: the launcher is locked then)
       function cameraSessionToggleCover() {
+        if (cameraSessionLock()) return cameraSessionLockTap();
+        cameraSessionCoverAt = null;
         cameraSessionCoverOpen = !document.getElementById(CAMERA_SESSION_COVER_ID);
         cameraSessionCoverRender();
         workshopNotify();
@@ -120,7 +201,15 @@
           cameraSessionCoverRender(); // Retry before any identity: still down; the build waits for it (workshopWhenIdentityKnown)
           return;
         }
-        if (isCameraOpen()) cameraSessionCoverOpen = true; // the open panel becomes the cover while it cannot be shown
+        if (isCameraOpen()) {
+          cameraSessionCoverOpen = true; // the open panel becomes the cover while it cannot be shown, in its own place (the view is blocked where it was)
+          var el = typeof cameraPanelEl !== "undefined" ? cameraPanelEl : null;
+          var r = el && typeof el.getBoundingClientRect === "function" ? el.getBoundingClientRect() : null;
+          cameraSessionCoverAt = r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+        } else {
+          cameraSessionCoverOpen = false; // closed: nothing pops up; the launcher of the bar says why with its lock
+          cameraSessionCoverAt = null;
+        }
         cameraSessionSeq++;
         cameraRemovePanel();
         cameraList = [cameraNormalize(CAMS_MAIN, 0)]; // 12-cameras.js: the default, not the list another person read

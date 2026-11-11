@@ -48,7 +48,7 @@
         }).filter(function (g) { return g.ids.length; });
       }
 
-      // Pure. The side bar lists EVERY tab (AWS rule: what you cannot open stays in its place, locked, with the role that opens it): the groups with all the ids.
+      // Pure. The side bar lists EVERY tab (locked-in-place rule: what you cannot open stays in its place, locked, with the role that opens it): the groups with all the ids.
       function cameraPageNavGroupsFor() {
         return cameraPageGroupsFor(function () { return true; });
       }

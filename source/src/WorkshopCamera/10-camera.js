@@ -159,6 +159,7 @@
       }
 
       function cameraToggle() {
+        if (cameraSessionLock()) return cameraSessionLockTap(); // no session / a role without the camera: the name + PIN dialog, nothing opens (09-camera-session.js)
         if (!cameraPanelEl) return cameraSessionToggleCover(); // no panel (09-camera-session.js): the cover tells why
         if (isCameraOpen()) cameraCollapse();
         else cameraExpand();
@@ -171,7 +172,7 @@
         var l = saved ? saved.left : cameraPanelEl.offsetLeft;
         var t = saved ? saved.top : cameraPanelEl.offsetTop;
         cameraPanelEl.style.left = clamp(l, MARGIN, window.innerWidth - cameraPanelEl.offsetWidth - MARGIN) + "px";
-        cameraPanelEl.style.top = clamp(t, MARGIN, window.innerHeight - cameraPanelEl.offsetHeight - MARGIN) + "px";
+        cameraPanelEl.style.top = clamp(t, workshopFloatMinTop(), window.innerHeight - cameraPanelEl.offsetHeight - MARGIN) + "px"; // never over DWC's top bar (00-core.js)
       }
 
       function buildCameraPanel(url) {

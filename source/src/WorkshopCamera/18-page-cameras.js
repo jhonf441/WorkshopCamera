@@ -60,6 +60,7 @@
         row.appendChild(cameraBtn(i18nT('noCamera.scan_go'), "", function () { S.scanOpen = !S.scanOpen; S.ctx.rerender(); }));
         row.appendChild(cameraBtn(i18nT('cameras.see_all'), "", function () { cameraOpenMosaic(); })); // the same mosaic as the viewer's button
         card.appendChild(row);
+        card.appendChild(cameraReasonEl("cameras")); // 09-camera-access-reasons.js: saving the list, scanning an address
         if (S.msg && !S.editing) card.appendChild(cameraEl("div", "color:var(--c-amber,#ffe082);", S.msg));
       }
 

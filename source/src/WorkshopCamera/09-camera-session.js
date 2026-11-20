@@ -62,6 +62,7 @@
         if (cause.kind === "loading") return workshopNoticeEl("empty", "cover", { title: title, text: i18nT("main.loading") });
         var box = workshopNoticeEl(cause.kind, "cover", {
           needed: cause.needed,
+          subject: title, // the camera: the cover says WHAT it covers (DESIGN 7d)
           text: cause.kind === "role" ? cameraSessionRoleText(cause.needed) : undefined, // the sentence of the camera (09-camera-session-wait.js)
           onRetry: function () {
             cameraRebuild("retry");

@@ -1,4 +1,14 @@
 {
+	"subjects_camera": {
+		"capture": "Capture",
+		"light": "Camera light",
+		"timelapse": "Timelapse",
+		"library": "Library",
+		"image": "Image settings",
+		"cameras": "Camera list",
+		"relay": "Video system",
+		"gallery": "Gallery"
+	},
 	"camera": {
 		"zoom_in_digital_zoom": "Zoom in (digital zoom)",
 		"all_cameras_grid": "All cameras (grid)",
@@ -7,6 +17,7 @@
 		"capture_photo_with_date_job_and": "Capture (photo with date, job and position)",
 		"retry": "Retry",
 		"recover_help": "Help to bring it back",
+		"black_try_flash": "Black picture: try the flash",
 		"badge_live": "LIVE",
 		"badge_photo": "PHOTO · every {s} s",
 		"camera_flash": "Camera flash",

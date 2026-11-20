@@ -1,4 +1,14 @@
 {
+	"subjects_camera": {
+		"capture": "Captura",
+		"light": "Luz de la cámara",
+		"timelapse": "Timelapse",
+		"library": "Biblioteca",
+		"image": "Ajustes de imagen",
+		"cameras": "Lista de cámaras",
+		"relay": "Sistema de video",
+		"gallery": "Galería"
+	},
 	"camera": {
 		"zoom_in_digital_zoom": "Acercar (zoom digital)",
 		"all_cameras_grid": "Todas las cámaras (mosaico)",
@@ -7,6 +17,7 @@
 		"capture_photo_with_date_job_and": "Capturar (foto con fecha, trabajo y posición)",
 		"retry": "Reintentar",
 		"recover_help": "Ayuda para recuperarla",
+		"black_try_flash": "Imagen negra: prueba el flash",
 		"badge_live": "EN VIVO",
 		"badge_photo": "FOTO · cada {s} s",
 		"camera_flash": "Flash de la cámara",

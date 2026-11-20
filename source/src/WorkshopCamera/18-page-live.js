@@ -123,6 +123,7 @@
             col.appendChild(cameraBtn(i18nT('live.record_timelapse') + "...", "min-height:44px;", function () { live.open = !live.open; live.reveal = live.open; c.rerender(); })); // reveal: the form opens under the picture, out of sight: bring it into view once it is drawn
           }
           col.appendChild(cameraTlBox(function () { c.reload(); }, { noStart: tech })); // the state, Stop and build, the schedule; the operator also starts here
+          col.appendChild(cameraReasonEl("timelapse"));
         }
         if (c.state.liveCam === "all" && cameraList.length > 1) { // "All": the light, the focus and the profiles belong to ONE camera each: one titled block per camera
           cameraLiveOrdered(cameraList).forEach(function (x) {
@@ -176,6 +177,7 @@
           });
           col.appendChild(b);
           cameraAvailLock(b, av, col);
+          col.appendChild(cameraReasonEl("capture", cam.id)); // 09-camera-access-reasons.js: why the service refuses the capture, when it does
         });
       }
 
@@ -186,10 +188,12 @@
         if (fl) extra.appendChild(fl);
         if (cameraCanDo("focus")) extra.appendChild(cameraBtn(i18nT('live.focus'), "", function () { c.go("image"); }));
         if (extra.children.length) col.appendChild(extra);
+        if (fl && cam) col.appendChild(cameraReasonEl("light", cam.id));
         if (cameraCanDo("cameras") && cam) {
           var profs = cameraEl("div", "");
           col.appendChild(profs);
           cameraLiveProfiles(profs, cam, c.notice, c.state);
+          col.appendChild(cameraReasonEl("image", cam.id));
         }
       }
 

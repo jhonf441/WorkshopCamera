@@ -14,7 +14,7 @@
       function cameraGalleryDeniedBox() {
         // N4 of the standard: no session has the sign-in button (the page has no bar), a role that is too low has none (a button would promise what cannot happen)
         var d = cameraEl("div", "padding:16px;", "");
-        d.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: "operator", text: cameraDenied() }));
+        d.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: "operator", text: cameraDenied(), subject: i18nT("subjects_camera.gallery") }));
         d.setAttribute("data-workshop-i18n", "");
         return d;
       }

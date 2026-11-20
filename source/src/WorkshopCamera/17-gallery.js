@@ -64,7 +64,7 @@
         // a refusal (no session / role too low) is never red: the shared notice of its cause (blue session, gray role)
         if (!ok && typeof WORKSHOP_PERMISSION_RE !== "undefined" && WORKSHOP_PERMISSION_RE.test(String(text || "")) && typeof workshopNoticeEl === "function") {
           var rk = typeof WORKSHOP_LOGIN_RE !== "undefined" && WORKSHOP_LOGIN_RE.test(String(text)) ? "session" : "role";
-          return page.appendChild(workshopNoticeEl(rk, "section", { text: String(text), action: "" }));
+          return page.appendChild(workshopNoticeEl(rk, "section", { text: String(text), action: "", subject: i18nT("subjects_camera.gallery") }));
         }
         var el = page.appendChild(cameraEl("div", "color:" + (ok ? "var(--c-green,#a5d6a7)" : "var(--c-error,#ef9a9a)") + ";", text));
         el.className = "ctl-alert " + (ok ? "green" : "red");
@@ -216,7 +216,7 @@
           hc.querySelector(".wf-title").textContent = i18nT('gallery.timelapses_and_captures');
           hc.querySelector(".wf-lead").textContent = i18nT('gallery.timelapses_of_jobs_or_by_hand');
           var cab = cameraEl("div", "");
-          cab.className = "wf-bar-right";
+          cab.className = "wf-bar-right"; cab.appendChild(workshopVersionChip());
           // a state = a dot + the word (err, info); a figure (videos, free space) = a pill with a border
           function chip(text, color, alTocar, titulo) {
             var c = cameraEl("span", null, text);
@@ -253,7 +253,7 @@
           if (pb && pb.items && pb.items.length) page.appendChild(noticeByDelete());
           // a tab above the role: ONE cover (no session blue, role too low gray, no button: the chip of the bar has the sign-in)
           var lockedTab = cameraPageTabNeed(pestana, cameraCanDo);
-          if (lockedTab) return page.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: lockedTab, action: "" }));
+          if (lockedTab) return page.appendChild(workshopNoticeEl(cameraSignedOut() ? "session" : "role", "cover", { needed: lockedTab, action: "", subject: i18nT("subjects_camera.gallery") }));
           if (pestana === "live") return cameraLiveTab(page, ctx()); // 18-page-live.js
           if (pestana === "store" && cameraCanDo("settings")) return renderSettings();
           if (pestana === "studio" && cameraCanDo("settings")) return cameraStudioPage(page, ctx());
@@ -313,6 +313,7 @@
             tabsEl.appendChild(b);
           });
           page.appendChild(tabsEl);
+          page.appendChild(cameraReasonEl("library")); // 09-camera-access-reasons.js: keep, rename, remove, edit
           var f = filtro.trim().toLowerCase();
           var ahora = new Date();
           function passes(x) {
@@ -516,7 +517,7 @@
         var refused = cause === "login_required" || cause === "forbidden";
         // N2: a refusal is a calm note by cause (session / role), a real failure is the error one; no second sign-in call (the chip has it)
         var kind = refused ? (cameraSignedOut() ? "session" : "role") : "error";
-        page.appendChild(workshopNoticeEl(kind, "section", { text: cameraRelayCauseNow(cause, why.status), needed: "operator" }));
+        page.appendChild(workshopNoticeEl(kind, "section", { text: cameraRelayCauseNow(cause, why.status), needed: "operator", subject: i18nT("subjects_camera.relay") }));
       }
 
       // The person signed in or out (or changed role): what the relay refused is read again now, not at the next refresh. Returns the way to stop listening.

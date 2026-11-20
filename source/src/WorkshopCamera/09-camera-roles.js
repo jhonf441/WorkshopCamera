@@ -130,10 +130,15 @@
           if (!canCapture || (pageHere && !canGallery)) {
             if (typeof workshopReasonEl === "function") {
               var kind = cameraSignedOut() ? "session" : "role";
-              reason = workshopReasonEl(kind, workshopNoticeText(kind, "operator"));
+              reason = workshopReasonEl(kind, workshopNoticeText(kind, "operator"), i18nT("subjects_camera.gallery"));
               reason.style.margin = "4px 8px";
               panel.appendChild(reason);
             }
+          } else if (typeof cameraReasonEl === "function") {
+            // the view may capture: say why the SERVICE would still refuse it (a profile, a ceiling, a condition), once, below the controls (09-camera-access-reasons.js)
+            reason = cameraReasonEl("capture", cameraChosen().id);
+            if (reason.style) reason.style.margin = "4px 8px";
+            panel.appendChild(reason);
           }
           parts.page.style.display = pageHere ? "flex" : "none"; // 18-page-tabs.js
           parts.page.disabled = !canGallery;

@@ -172,6 +172,7 @@
         if (id === "network" && ui.o.go && cameraCanDo("cameras")) {
           return cameraBtn(i18nT("recover.network_go"), "align-self:flex-start;", function () { ui.o.go("cameras"); });
         }
+        if (id === "relay") return cameraReasonEl("relay"); // 09-camera-access-reasons.js: why the service refuses to stop and start the video system (under the step, beside its button)
         return null;
       }
 

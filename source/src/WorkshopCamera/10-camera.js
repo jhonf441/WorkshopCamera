@@ -179,13 +179,9 @@
         if (document.getElementById(CAMERA_PANEL_ID) || !url || !cameraCanDo("view")) return; // never an empty URL, never for a person who cannot see it
         var savedSize = cameraFitSize(loadSize(CAMERA_SIZE_KEY, CAMERA_W, CAMERA_H)); // a size saved on a wide screen must fit a phone
         var flashOn = false;
-        // Photo mode (default) vs live video -- see button "modeBtn" further
-        // down, next to the flash. Photo asks for a single JPEG every
-        // CAMERA_SNAPSHOT_POLL_MS from the relay (which caches it, see
-        // camera_relay.py) instead of decoding continuous MJPEG -- much
-        // cheaper in CPU on the viewing side (confirmed live
-        // 2026-10-07 that the real cost is the decode in the browser, not
-        // the network/the relay).
+        // Photo mode (default) vs live video (button "modeBtn", next to the flash): photo asks the relay (which caches it, see
+        // camera_relay.py) for one JPEG every CAMERA_SNAPSHOT_POLL_MS instead of decoding continuous MJPEG; the real cost is the decode in the
+        // browser, not the network (confirmed live 2026-10-07).
         var liveMode = false;
         var snapshotTimerId = null;
         var snapshotUrl = url.replace(/\/stream$/, "/snapshot");
@@ -197,14 +193,8 @@
 
         var img = document.createElement("img");
         img.alt = i18nT('main.camera');
-        // display:none until there is a real src -- an <img> without src
-        // but with a fixed size (100%x100%) shows the browser's
-        // "broken image" icon in the corner even before
-        // tapping "View camera" (confirmed on the kiosk 2026-10-07). It uses
-        // setProperty(...,"important") because a display:none set through
-        // normal cssText was not enough -- some global CSS rule of DWC
-        // (Vuetify) wins by specificity/its own !important; with
-        // !important on this side it is respected (confirmed live).
+        // display:none until there is a real src: an <img> without src but with a fixed size shows the browser's "broken image" icon
+        // (confirmed on the kiosk 2026-10-07). setProperty(...,"important") because a global CSS rule of DWC (Vuetify) beat a plain cssText.
         img.style.cssText = "width:100%;height:100%;object-fit:contain;pointer-events:none;";
         img.style.setProperty("display", "none", "important");
         panel.appendChild(img);
@@ -250,7 +240,7 @@
           var alive = !h || h.state === "fresh" || h.state === "waiting";
           helpBtn.style.display = !alive && cameraPageRegistered ? "" : "none"; // locked (not hidden) for a view without the gallery
           helpBtn.disabled = !cameraCanDo("gallery");
-          viewBtn.style.display = alive ? "none" : ""; // Retry whenever the picture is not alive, in either mode
+          viewBtn.style.display = alive ? "none" : ""; if (cameraBlackFlash(h, flashBtn)) viewBtn.style.display = helpBtn.style.display = "none"; // Retry whenever the picture is not alive, in either mode; a black one with the flash off is a dark room (11-panel-parts.js)
         }
 
         function startSnapshotMode() {
@@ -399,7 +389,7 @@
         var mode = cameraModeButton(panel);
         var modeBtn = mode.btn;
 
-        var modeBadge = cameraModeBadge(panel); // 11-panel-parts.js
+        var modeBadge = cameraModeBadge(panel); cameraBlackHint = function () { return cameraFlashCanLight(flashBtn) ? i18nT('camera.black_try_flash') : ""; }; // 11-panel-parts.js
         function updateModeBtn() {
           mode.paint(liveMode, !!snapshotUrl);
           paintHealth(); // the badge says what the judgement says, in the mode on screen

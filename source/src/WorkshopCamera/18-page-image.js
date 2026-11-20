@@ -30,6 +30,7 @@
         two.appendChild(left);
         two.appendChild(right);
         card.appendChild(two);
+        right.appendChild(cameraReasonEl("image", cam.id)); // 09-camera-access-reasons.js
         cameraFocusCard(left, cam, S.urls.u, right, { go: ctx.go }); // 11-focus.js: the picture with its state and help, and the assistant when the view has it
         if (!cam.esp32) right.appendChild(cameraEl("div", null, i18nT('image.not_esp32'))).className = "ctl-muted";
         cameraImageOrientation(card, cam);

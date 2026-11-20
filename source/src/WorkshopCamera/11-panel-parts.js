@@ -229,31 +229,38 @@
         return button;
       }
 
-      // Where Retry and the help button sit, and how they look at each width (owner report 2026-11-06: ugly, and in a small viewer they covered the
-      // little picture that was left). A wide viewer: the two stacked in the middle, with their words. A narrow one: round icons side by side at the
-      // BOTTOM of the viewer (above the row of round buttons), so the middle stays clear; the words stay in the tooltip.
-      // Pure: the geometry for a width. Returns { small, top, retryTransform, helpTransform, size }.
+      // Where Retry and the help button sit, and how they look at each width (owner report 2026-11-06: ugly; 2026-11-18: still ugly, the second one has too
+      // much text). A wide viewer: side by side in the middle, Retry with its icon and its word and the help as a round "?" (its words are the tooltip). A
+      // narrow one: both round icons in the SAME row as the round buttons of the bottom, on the right (before the resize corner), so the middle stays clear.
+      // Pure: the geometry for a width. Returns { small, top, bottom, right, retryTransform, helpTransform, size }.
       function cameraOverButtonsLayout(compact) {
-        if (compact) return { small: true, top: "auto", bottom: "36px", retryTransform: "translate(-110%,0)", helpTransform: "translate(10%,0)", size: "32px" };
-        return { small: false, top: "50%", bottom: "auto", retryTransform: "translate(-50%,-100%)", helpTransform: "translate(-50%,8px)", size: "" };
+        if (compact) return { small: true, top: "auto", bottom: "4px", retryRight: "22px", helpRight: "52px", retryTransform: "none", helpTransform: "none", size: "26px" };
+        return { small: false, top: "50%", bottom: "auto", retryRight: "auto", helpRight: "auto", retryTransform: "translate(calc(-100% - 4px),-50%)", helpTransform: "translate(4px,-50%)", size: "" };
       }
 
       function cameraNarrowIcons(panel, retry, help) {
         var ICON_RETRY = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4z"/></svg>';
         var ICON_HELP = '<svg viewBox="0 0 24 24" width="18" height="18" style="pointer-events:none;vertical-align:middle" fill="#fff"><path d="M11 18h2v-2h-2v2zm1-16a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm0-14a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>';
-        var retryWords = retry.textContent, helpWords = help.textContent;
+        var retryWords = retry.textContent;
         retry.title = retryWords;
+        help.setAttribute("aria-label", help.title); // the words of the help are its tooltip and its accessible name; the button is only the "?"
         function paint() {
           var L = cameraOverButtonsLayout(cameraIsCompact(panel));
-          retry.innerHTML = L.small ? ICON_RETRY : "";
-          if (!L.small) retry.textContent = retryWords;
-          help.innerHTML = L.small ? ICON_HELP : "";
-          if (!L.small) help.textContent = helpWords;
-          retry.style.padding = help.style.padding = L.small ? "0" : "";
-          retry.style.width = retry.style.height = help.style.width = help.style.height = L.size;
-          retry.style.borderRadius = help.style.borderRadius = L.small ? "50%" : "";
+          // Retry: the icon always, the word only when wide; the help: the icon only, round, always
+          retry.innerHTML = ICON_RETRY + (L.small ? "" : "<span>" + retryWords.replace(/</g, "&lt;") + "</span>");
+          help.innerHTML = ICON_HELP;
+          retry.style.padding = L.small ? "0" : "0 14px 0 10px";
+          help.style.padding = "0";
+          retry.style.width = L.small ? L.size : "";
+          retry.style.height = L.small ? L.size : "";
+          help.style.width = help.style.height = L.small ? L.size : "32px";
+          retry.style.borderRadius = L.small ? "50%" : "";
+          help.style.borderRadius = "50%";
           retry.style.top = help.style.top = L.top;
           retry.style.bottom = help.style.bottom = L.bottom;
+          retry.style.left = help.style.left = L.small ? "auto" : "50%";
+          retry.style.right = L.retryRight;
+          help.style.right = L.helpRight;
           retry.style.transform = L.retryTransform;
           help.style.transform = L.helpTransform;
         }
@@ -329,6 +336,15 @@
       // LIVE or PHOTO in green only while frames come and are not black; otherwise it carries the words and the colour of the state (amber for a
       // picture that stopped or is black, red for a camera that does not respond), the same as every other place (owner report 2026-11-03).
       // `host` is the element it sits on (absolute); `css` positions it.
+      // 2026-11-18: a black picture with a flash that is on screen, allowed and off is almost always a dark room: asking again or reading the help does not
+      // light it, so the badge says to try the flash and Retry and the help stay out; with the flash on and still black they come back
+      function cameraFlashCanLight(btn) {
+        return btn.style.display !== "none" && !btn.disabled && btn.getAttribute("aria-pressed") !== "true";
+      }
+      function cameraBlackFlash(h, btn) {
+        return !!h && h.state === "black" && cameraFlashCanLight(btn);
+      }
+      var cameraBlackHint = null; // set by the viewer (10-camera.js): the sentence for a black picture whose flash is still off, or "" (none)
       function cameraBadge(host, css) {
         var b = document.createElement("div");
         b.setAttribute("data-workshop-i18n", "");
@@ -340,6 +356,7 @@
           last = [live, h];
           var state = h ? h.state : "waiting";
           var words = !h || state === "fresh" ? (live ? "● " + i18nT('camera.badge_live') : i18nT('camera.badge_photo', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 })) : cameraHealthWord(h, i18nT);
+          if (viewer && state === "black" && typeof cameraBlackHint === "function") words = cameraBlackHint() || words;
           var small = viewer && cameraIsCompact(host); // narrow viewer: a coloured dot, the words stay in the tooltip
           b.textContent = small ? "" : words;
           b.title = words;
@@ -347,6 +364,7 @@
           b.style.height = small ? "10px" : "";
           b.style.padding = small ? "0" : "1px 7px";
           b.style.borderRadius = small ? "50%" : "9px";
+          if (viewer) { b.style.left = small ? "68px" : "6px"; b.style.top = small ? "13px" : "34px"; } // narrow: the dot sits in the top row, after play and flash
           b.style.background = cameraHealthFill(state);
           b.setAttribute("data-state", state);
         };
@@ -366,13 +384,13 @@
           '<line x1="3" y1="21" x2="21" y2="3" stroke="#ef5350" stroke-width="2.5"/>' +
           "</svg>";
         flashBtn.style.cssText =
-          "position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#37474f;color:#000;font-size:14px;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;display:none;";
+          "position:absolute;left:34px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#37474f;color:#000;font-size:14px;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;display:none;";
         cameraFlashPaint(flashBtn, false);
         panel.appendChild(flashBtn);
         return flashBtn;
       }
 
-      // The mode button (next to the flash): photo (light, default) or live video. Returns { btn, paint(liveMode, shown) }: "play" = it is in photo,
+      // The mode button (first of the top left corner, the flash is after it): photo (light, default) or live video. Returns { btn, paint(liveMode, shown) }: "play" = it is in photo,
       // tapping switches to video; "stop" = it is in video, tapping goes back to photo.
       var CAMERA_MODE_ICON_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><path d="M8 5v14l11-7z"/></svg>';
       var CAMERA_MODE_ICON_STOP = '<svg viewBox="0 0 24 24" width="14" height="14" style="pointer-events:none;vertical-align:middle" fill="#000"><rect x="6" y="6" width="12" height="12"/></svg>';
@@ -380,7 +398,7 @@
         var modeBtn = document.createElement("button");
         modeBtn.type = "button";
         modeBtn.style.cssText =
-          "position:absolute;left:34px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#e0e0e0;color:#000;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;";
+          "position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;border:none;background:#e0e0e0;color:#000;line-height:26px;text-align:center;padding:0;cursor:pointer;touch-action:none;z-index:1;";
         panel.appendChild(modeBtn);
         return {
           btn: modeBtn,

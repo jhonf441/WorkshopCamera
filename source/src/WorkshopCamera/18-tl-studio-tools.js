@@ -22,6 +22,7 @@
             S.notice(d.ok ? i18nT("studio.burst_started", { count: d.count }) : i18nT("common.couldn_t_error", { error: d.error || "" }), !!d.ok);
           }).catch(function (e) { S.notice(i18nT("common.couldn_t_error", { error: String(e.message || e) }), false); });
         }));
+        c.appendChild(cameraReasonEl("capture", S.cam || "main")); // 09-camera-access-reasons.js
         return c;
       }
 
@@ -55,5 +56,6 @@
               .catch(function (e) { S.notice(i18nT("common.couldn_t_error", { error: String(e.message || e) }), false); });
           }));
         });
+        c.appendChild(cameraReasonEl("library")); // 09-camera-access-reasons.js: building a video again
         return c;
       }

@@ -167,6 +167,7 @@
         row.appendChild(cameraBtn(i18nT("tlSettings.save_settings"), changed ? "background:#1976d2;color:#fff;" : "", function () { S.save(S.draft); }));
         if (changed) row.appendChild(cameraBtn(i18nT("tlSettings.discard_changes"), "", function () { S.undo(); }));
         c.appendChild(row);
+        c.appendChild(cameraReasonEl("timelapse")); // 09-camera-access-reasons.js: why the take is refused, when it is
         c.appendChild(cameraEl("div", null, changed ? i18nT("tlSettings.there_are_unsaved_changes") : i18nT("studio.take_saved_hint"))).className = "ctl-muted";
         return c;
       }

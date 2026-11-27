@@ -8,7 +8,7 @@
       // Pi's Service (camera relay, :8090) with ffmpeg: it does not use Vision
       // nor OpenCV.
 
-      var CAMERA_CSS_SEL = "padding:4px;min-height:32px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
+      var CAMERA_CSS_SEL = "padding:4px;min-height:36px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
 
       // DESIGN.md style (2026-10-10, "apply the styles already defined"):
       // variables with the dark palette (floating panels: the viewer's sheet) and
@@ -21,8 +21,10 @@
         st.id = "workshop-tl-css";
         workshopInjectFamily(); // the design family (wf-* classes), once per page
         st.textContent = workshopCss([
-          ".ctl{--c-card:#263238;--c-interna:rgba(0,0,0,0.18);--c-edge:rgba(255,255,255,0.12);--c-text:#eceff1;--c-sec:var(--wf-n-role-text,#b0bec5);--c-field:#1e272c;--c-field-edge:rgba(255,255,255,0.3);--c-btn-edge:rgba(255,255,255,0.23);--c-neutro:#37474f;--c-blue:var(--wf-n-session-text,#90caf9);--c-green:#a5d6a7;--c-amber:var(--wf-n-down-text,#ffe082);--c-notice:var(--wf-n-down-text,#ffb74d);--c-error:#ef9a9a;--c-tab:rgba(255,255,255,0.6);color:var(--c-text);font-size:12px;}",
-          ".theme--light .ctl{--c-card:#ffffff;--c-interna:#f5f7f8;--c-edge:rgba(0,0,0,0.12);--c-text:#212121;--c-sec:#616161;--c-field:#ffffff;--c-field-edge:rgba(0,0,0,0.23);--c-btn-edge:rgba(0,0,0,0.23);--c-neutro:#eceff1;--c-blue:#1565c0;--c-green:#2e7d32;--c-amber:#8d6e00;--c-notice:#b26a00;--c-error:#c62828;--c-tab:rgba(0,0,0,0.54);}",
+          // --c-field-edge is the family's control border (--wf-control-line, 3:1): every field of the page (the day and time of a scheduled timelapse,
+          // the selects of the storage) is seen against its card (owner 2026-11-23, note 7: the date field must be seen well in every plugin)
+          ".ctl{--c-card:#263238;--c-interna:rgba(0,0,0,0.18);--c-edge:rgba(255,255,255,0.12);--c-text:#eceff1;--c-sec:var(--wf-n-role-text,#b0bec5);--c-field:#1e272c;--c-field-edge:var(--wf-control-line,#8c8c8c);--c-btn-edge:rgba(255,255,255,0.23);--c-neutro:#37474f;--c-blue:var(--wf-n-session-text,#90caf9);--c-green:#a5d6a7;--c-amber:var(--wf-n-down-text,#ffe082);--c-notice:var(--wf-n-down-text,#ffb74d);--c-error:#ef9a9a;--c-tab:rgba(255,255,255,0.6);color:var(--c-text);font-size:12px;color-scheme:dark;}",
+          ".theme--light .ctl{--c-card:#ffffff;--c-interna:#f5f7f8;--c-edge:rgba(0,0,0,0.12);--c-text:#212121;--c-sec:#616161;--c-field:#ffffff;--c-field-edge:var(--wf-control-line,#757575);--c-btn-edge:rgba(0,0,0,0.23);--c-neutro:#eceff1;--c-blue:#1565c0;--c-green:#2e7d32;--c-amber:#8d6e00;--c-notice:#b26a00;--c-error:#c62828;--c-tab:rgba(0,0,0,0.54);color-scheme:light;}",
           // ---- the design family (src/_shared/05-family-css.js) draws the bar, the menu, the cards, the buttons and the states (wf-*);
           // below only the layout of the page and the content that is the Camera's own ----
           ".ctl-with-nav{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:12px;align-items:start;}",
@@ -31,9 +33,8 @@
           ".ctl-with-nav>.ctl-nav{grid-column:1;grid-row:2/span 60;position:sticky;top:64px;width:190px;display:flex;flex-direction:column;padding:0 4px 8px 0;z-index:3;}",
           ".ctln-head{display:flex;align-items:center;justify-content:space-between;}.ctl-nav.collapsed .ctln-head{flex-direction:column-reverse;justify-content:center;}",
           ".ctln-pin{width:auto!important;min-width:32px;padding:0 8px!important;display:inline-flex;align-items:center;gap:4px;font-size:12px;opacity:.85!important;}.ctln-pin.pinned{opacity:1!important;}.ctl-nav.collapsed .ctln-pin{width:32px!important;padding:0!important;justify-content:center;}",
-          ".ctln-fold{align-self:flex-end;height:32px;width:32px;border:none;border-radius:6px;background:transparent;color:inherit;opacity:.7;cursor:pointer;}.ctln-fold:hover{background:rgba(128,128,128,0.12);opacity:1;}",
-          ".ctl-nav-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:6px 12px;text-align:left;cursor:pointer;}",
-          "@media (pointer:coarse),(max-width:599px){.ctl-nav-item{min-height:44px;}}",
+          ".ctln-fold{position:relative;align-self:flex-end;height:32px;width:32px;border:none;border-radius:6px;background:transparent;color:inherit;opacity:.7;cursor:pointer;}.ctln-fold:hover{background:rgba(128,128,128,0.12);opacity:1;}",
+          ".ctl-nav-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:4px 12px;text-align:left;cursor:pointer;}",
           ".ctl-nav.collapsed{width:52px;overflow:hidden;}.ctl-nav.collapsed .tx{display:none;}.ctl-nav.collapsed .ctl-nav-item{justify-content:center;padding:6px 0;}",
           ".ctl-with-nav>.ctl-nav.collapsed{width:52px;}.ctl-nav.collapsed .ctln-fold{align-self:center;}",
           "@media (max-width:900px){.ctl-with-nav{display:block;}.ctl-with-nav>.ctl-nav,.ctl-with-nav>.ctl-nav.collapsed{position:static;flex-direction:row;flex-wrap:wrap;width:auto;padding:0 0 4px;margin-bottom:10px;}.ctl-nav-item,.ctl-nav.collapsed .ctl-nav-item{width:auto;justify-content:flex-start;padding:6px 8px;}.ctl-nav.collapsed .tx{display:block;}.ctln-fold{display:none;}}",
@@ -41,13 +42,13 @@
           ".ctl-card.wf-card{display:flex;flex-direction:column;gap:8px;min-width:0;}",
           ".ctl-gp{display:flex;flex-direction:column;gap:8px;min-width:0;font-size:13px;}",
           ".ctl-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;}",
-          ".ctl-title .mdi{font-size:20px;color:var(--wf-icon,rgba(128,128,128,0.95));}",
+          ".ctl-title .mdi{font-size:20px;color:var(--wf-sec-now,var(--wf-sec,#6d4c41));}", // the icon of a card title in the colour of the section (ux 2026-11-23)
           ".ctl-click{cursor:pointer;}",
           // the groups of the side bar (the family draws their text; the room and the folded look are the page's own) and the count of the library
           ".ctl-nav .ctl-nav-group{padding:12px 12px 4px;}.ctl-nav.collapsed .ctl-nav-group{visibility:hidden;height:6px;padding:0;overflow:hidden;}",
           ".ctl-nav-count{margin-left:auto;padding:0 6px;}.ctl-nav.collapsed .ctl-nav-count{display:none;}",
           "@media (max-width:900px){.ctl-nav .ctl-nav-group,.ctl-nav.collapsed .ctl-nav-group{display:none;}}",
-          // the Live tab: the pictures on the left and the buttons on the right (one column when it is narrow)
+          // the Image tab: the picture on the left and the profiles on the right (one column when it is narrow)
           ".ctl-live-two{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start;}@media (max-width:900px){.ctl-live-two{grid-template-columns:1fr;}}",
           ".ctl-on{border-color:var(--wf-icon,rgba(128,128,128,0.95));font-weight:600;}",
           ".ctl-danger{color:var(--wf-err,#e53935);border-color:var(--wf-err,#e53935);}",
@@ -59,9 +60,9 @@
           ".ctl-alert.blue{border-color:var(--wf-info,#1e88e5);}.ctl-alert.red{border-color:var(--wf-err,#e53935);}.ctl-alert.green{border-color:var(--wf-ok,#43a047);}.ctl-alert.amber{border-color:var(--wf-warn,#fb8c00);}",
           ".ctl-mini{border-radius:8px;overflow:hidden;border:1px solid rgba(128,128,128,0.3);display:flex;flex-direction:column;}",
           ".ctl-mini.sel{border-color:var(--wf-accent,#1976d2);}",
-          ".ctl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start;}",
-          ".ctl-muted{color:var(--c-sec);font-size:11px;}",
-          ".ctl input[type=datetime-local],.ctl input[type=text],.ctl input:not([type]){background:var(--c-field);color:var(--c-text);border:1px solid var(--c-field-edge);border-radius:4px;min-height:32px;padding:4px 8px;font:inherit;box-sizing:border-box;}",
+          ".ctl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px;align-items:start;}",
+          ".ctl-muted{color:var(--c-sec);font-size:12px;}",
+          ".ctl input[type=text],.ctl input:not([type]){background:var(--c-field);color:var(--c-text);border:1px solid var(--c-field-edge);border-radius:6px;min-height:36px;padding:4px 12px;font:inherit;box-sizing:border-box;}",
           ".ctl .ctl-live{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}",
           ".ctl .ctl-live img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#000;border-radius:6px;display:block;}",
           ".ctl-group{border:1px solid var(--c-edge);border-radius:8px;padding:10px;background:var(--c-interna);display:flex;flex-direction:column;gap:6px;font-size:12px;}",
@@ -70,21 +71,77 @@
           ".theme--light .ctl.ctl-page{--c-card:#ffffff;--c-interna:#f5f7f8;--c-text:#212121;--c-sec:rgba(0,0,0,0.6);--c-field:#ffffff;}",
           ".ctl-sub{font-size:14px;color:var(--c-sec);}",
           // the judgement of a picture and the help to bring the camera back (14-health.js, 14-health-recover.js): a sub-card with numbered steps
-          ".ctl-health{display:flex;flex-direction:column;gap:4px;margin-top:6px;}",
+          ".ctl-health{display:flex;flex-direction:column;gap:8px;margin-top:6px;}",
+          // the state of the picture in ONE line: the dot and its words, then the hint (cut with an ellipsis, the whole hint in the tooltip of the line)
+          ".ctl-health-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0;}.ctl-health-row>.wf-state{flex:none;white-space:nowrap;}",
+          ".ctl-health-row>.ctl-muted{flex:1 1 220px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
+          // a phone: the dot and the word on their line, the hint under it at the whole width (it used to break into three lines, ux 2026-11-23)
+          ".ctl-page[data-w=s] .ctl-health-row>.ctl-muted{flex-basis:100%;white-space:normal;}",
           ".ctl-recover{border-radius:8px;background:rgba(128,128,128,0.07);padding:8px 12px;}",
-          ".ctl-recover>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:32px;display:flex;align-items:center;}",
-          ".ctl-rsteps{display:flex;flex-direction:column;gap:10px;padding-top:4px;}",
+          ".ctl-recover>summary{cursor:pointer;font-weight:600;font-size:14px;min-height:40px;display:flex;align-items:center;}",
+          ".ctl-rsteps{display:flex;flex-direction:column;gap:0;padding-top:4px;}",
           ".ctl-rstep{display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0;}",
-          ".ctl-rstep-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}",
-          ".ctl-rnum{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--c-sec);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}",
-          ".ctl-rhelp>summary{cursor:pointer;font-size:12px;color:var(--c-sec);min-height:28px;display:flex;align-items:center;}",
-          ".ctl-rhelp>div{font-size:12px;padding-left:12px;}",
+          ".ctl-rstep-h{display:flex;align-items:center;gap:8px;min-height:40px;}.ctl-rname{flex:1 1 auto;min-width:0;font-size:13px;}",
+          ".ctl-rnum{flex:none;width:20px;height:20px;border-radius:50%;border:1px solid var(--c-sec);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}",
           ".ctl-rresult{font-size:12px;color:var(--c-amber);white-space:pre-wrap;}",
           // the commands to type at the system (step 7 of the help): they wrap inside the card and a long address breaks where it must, never past the
           // edge of the panel (capture 2026-11-06); a line that still does not fit scrolls inside the block
           ".ctl-mono{font-family:monospace;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%;box-sizing:border-box;overflow-x:auto;padding:6px 8px;border-radius:6px;background:var(--c-interna);}",
-        ]);
+        ].concat(cameraTlCssPage()));
         document.head.appendChild(st);
+      }
+
+      // The rules of the redesign of 2026-11-23 (CAMARA-REDISENO.md), kept apart from the base sheet of the page: the narrow form of the side bar and its
+      // sheet, the scale of the page (32 / 36 px to see, 40 px to touch) with the colour of the open group, and the two cards of the Live tab.
+      function cameraTlCssPage() {
+        return [
+          // a phone: the figures of the bar (videos, free space) are the Storage tab's; the bar keeps the state, the start-up chip and the session
+          ".ctl-page[data-w=s] .wf-bar .wf-pill{display:none;}",
+          // the library (CAMARA-REDISENO.md): the icons of each card always on screen; the opening button of the family range picker at 32 px
+          ".ctl-mini-acts{display:flex;gap:8px;padding:0 8px 8px;}",
+          ".ctl-range>button{min-height:32px !important;}",
+          // the narrow form of the bar (the page is under 640 px: data-w="s", 18-page-tabs.js cameraPageWidthWatch; criteria C7, owner note 17): ONE
+          // "Section: <name>" button at the whole width that opens the sheet with every entry; the rest of the bar is not drawn (it lives in the sheet)
+          // (the button is the family's wf-btn and the entries are the family's wf-nav items: only the layout is the page's own)
+          ".ctl-nav-pick{display:none;}",
+          ".ctl-page[data-w=s].ctl-with-nav{display:block;}",
+          ".ctl-page[data-w=s]>.ctl-nav,.ctl-page[data-w=s]>.ctl-nav.collapsed{position:static;display:block;width:auto;padding:0 0 8px;margin:0 0 12px;}",
+          ".ctl-page[data-w=s]>.ctl-nav>:not(.ctl-nav-pick){display:none!important;}",
+          ".ctl-page[data-w=s] .ctl-nav-pick{display:flex;justify-content:flex-start;gap:8px;width:100%;padding:0 12px;box-sizing:border-box;text-align:left;}",
+          ".ctl-pick-icon{font-size:20px;color:var(--wf-icon,rgba(128,128,128,0.95));}.ctl-pick-label{flex:none;font-size:12px;color:var(--c-sec);}",
+          ".ctl-pick-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}",
+          // the sheet of that button: a NON-modal <dialog> that only holds the family's wf-sheet (the same entries in one column). It draws nothing of its
+          // own and has no dark background; it sits fixed in the box under DWC's bar and left of the control bar (inline top / right / width / max-height,
+          // 18-page-tabs.js) and BELOW the floating panels (the Jog and its STOP / E-STOP, the control bar): owner's safety rule, nothing covers a stop
+          ".ctl-sheet-dialog{position:fixed;z-index:2147482000;bottom:auto;margin:0 auto;padding:0;border:0;background:transparent;color:inherit;max-width:none;overflow:visible;}",
+          ".ctl-sheet-dialog>.wf-sheet{max-height:inherit;}",
+          ".ctl-sheet-list{display:flex;flex-direction:column;padding:4px 0 12px;}",
+          ".ctl-sheet-list.wf-nav .ctl-nav-item{width:100%;justify-content:flex-start;padding:6px 16px;}",
+          ".ctl-sheet-list .ctl-nav-group{padding:12px 16px 4px;}",
+          // ---- the scale of the Camera page (family design, 2026-11-23): a button is 32 px to see,
+          // the main one of a card 36, a field 36; every button is touched over 40 px by an invisible ::after centred on it (8 px between buttons,
+          // so two areas never overlap). A stop is never on this page. The family button keeps its look; only its height is the page's ----
+          ".ctl .wf-btn{min-height:var(--wf-size-s,32px);padding:0 12px;}", // the scale tokens of the family (front 2026-11-23), with their values as fallback
+          ".ctl .wf-btn.wf-main{min-height:var(--wf-size-m,36px);padding:0 16px;}",
+          ".ctl .wf-btn::after,.ctln-fold::after{content:'';position:absolute;left:0;right:0;top:50%;height:var(--wf-hit,40px);transform:translateY(-50%);}",
+          ".ctln-fold::after{left:-4px;right:-4px;}",
+          ".ctl .wf-input,.ctl select{min-height:var(--wf-size-m,36px);}",
+          ".ctl-page .ctl-nav .ctl-nav-item{min-height:40px;}", // the entries of the bar are rows of 40 (the family's 44 is a more specific rule)
+          ".ctl-icon-btn.wf-btn{width:32px;min-width:32px;padding:0;}.ctl-icon-btn .mdi{font-size:18px;}",
+          ".ctl-icon-btn.wf-btn::after{left:-4px;right:-4px;}",
+          // the colour of the group of the open section: the line on top of the cards and on the open entry of the bar (the page sets --wf-sec, 17-gallery.js)
+          ".ctl-page[data-group='1']{--wf-sec:#6a40b0;}.ctl-page[data-group='2']{--wf-sec:#455a64;}",
+          // the Live tab (CAMARA-REDISENO.md): the View card (2 parts) and the Actions card (1 part, at least 280 px) side by side on a wide page, one under
+          // the other on a tablet or a phone (data-w of the page); the tools row above the picture wraps (the chips first, the icons after)
+          ".ctl-live2{display:grid;grid-template-columns:minmax(0,2fr) minmax(min(280px,100%),1fr);gap:12px;align-items:start;}",
+          ".ctl-page[data-w=s] .ctl-live2,.ctl-page[data-w=m] .ctl-live2{grid-template-columns:minmax(0,1fr);}",
+          ".ctl-live-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}",
+          ".ctl-live-tools-l,.ctl-live-tools-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;}.ctl-live-tools-r{margin-left:auto;}",
+          // the Actions card: buttons at their own width (the main one first), and the notes that have nothing to say take no room
+          ".ctl-live2 .ctl-card>.wf-btn{align-self:flex-start;}.ctl-live2 .ctl-card>div:empty{display:none;}",
+          ".ctl-live-pic{display:flex;flex-direction:column;gap:8px;min-width:0;}",
+          ".ctl-live-pic:fullscreen{justify-content:center;padding:12px;background:#000;}",
+        ];
       }
 
       // Explicacion corta, en pasos
@@ -103,7 +160,7 @@
           f.appendChild(tx);
           box.appendChild(f);
         });
-        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT(workshopPluginActive("vision") ? 'tlSettings.the_system_service_the_camera_relay' : 'tlSettings.the_system_service_the_camera_relay_no_vision')));
+        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT(workshopPluginActive("vision") ? 'tlSettings.the_system_service_the_camera_relay' : 'tlSettings.the_system_service_the_camera_relay_no_vision')));
         return box;
       }
 
@@ -124,8 +181,8 @@
       // "Free on the system: X GB" with a thin grey bar (what the videos take of the limit chosen for them) and the line of what is stored.
       function cameraStoreUsage(card, b, u) {
         var row = cameraEl("div", "display:flex;justify-content:space-between;gap:10px;font-size:13px;");
-        var rowLabel = cameraEl("span", "opacity:.7;display:inline-flex;align-items:center;gap:4px;", i18nT('tlSettings.free_on_the_system'));
-        rowLabel.appendChild(workshopHelpTipOf("camera_store"));
+        // the help of the space is the family's fold UNDER the block (below), never a "?" that floats beside the label (owner 2026-11-23, note 3c; criteria C4)
+        var rowLabel = cameraEl("span", "color:var(--c-sec);", i18nT('tlSettings.free_on_the_system')); // the secondary text colour (4.5:1), not a dimmed one
         row.appendChild(rowLabel);
         row.appendChild(cameraEl("b", null, u.free_gb != null ? u.free_gb + " GB" : "?"));
         card.appendChild(row);
@@ -141,11 +198,12 @@
         if (u.captures != null) line.push(i18nT('common.captures') + " " + u.captures);
         if (line.length) card.appendChild(cameraEl("div", "font-size:13px;", line.join(" · ")));
         card.appendChild(cameraEl("div", null, i18nT('tlSettings.on_the_system_s_card_videos'))).className = "ctl-muted";
+        card.appendChild(workshopHelpFoldEl(workshopHelpSpecOf("camera_store"))); // the fold at the whole width of the block, closed by default
       }
 
       // A <select> of [value, text] options; a value that is not in the list is added (what is saved always shows).
       function cameraStoreSelect(options, current, onChange, rr) {
-        var s = cameraEl("select", CAMERA_CSS_SEL + "width:100%;");
+        var s = cameraEl("select", CAMERA_CSS_SEL + "width:200px;max-width:100%;"); // the control of a row of the family
         var has = false;
         options.forEach(function (op) {
           var e = cameraEl("option", null, op[1]);
@@ -165,13 +223,20 @@
 
       // The fields, two columns (one when it is narrow): space for the videos, how many videos and captures, the wait before deleting, the notice.
       function cameraStoreFields(card, b, u, rr) {
-        var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px;");
+        // the rows of the family (wf-row: the name at the left, the control at the right; CAMARA-REDISENO.md), two columns where they fit, one on a phone
+        var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));column-gap:24px;margin-top:4px;");
         function field(label, control) {
-          var f = cameraEl("div", "display:flex;flex-direction:column;gap:4px;min-width:0;");
-          f.appendChild(cameraEl("label", "font-size:12px;opacity:.7;", label));
-          f.appendChild(control);
-          grid.appendChild(f);
-          return f;
+          var row = cameraEl("div", "");
+          row.className = "wf-row";
+          var f = cameraEl("div", "min-width:0;");
+          f.appendChild(cameraEl("label", null, label)).className = "wf-row-name";
+          row.appendChild(f);
+          var ctl = cameraEl("div", "");
+          ctl.className = "wf-row-control";
+          ctl.appendChild(control);
+          row.appendChild(ctl);
+          grid.appendChild(row);
+          return f; // a note of the field (the space for the videos) goes under its name
         }
         // options according to the Pi's space (2026-10-10, "the values offered must match the free space"): what there is for videos
         // = what they already take + what is free - 2 GB reserve (with less nothing is recorded)
@@ -180,7 +245,7 @@
         var free = u.free_gb != null ? u.free_gb : tl0.disk_free_gb;
         var opsEsp = cameraOptionsSpace(used, free, b.timelapses_gb || 5);
         var fSpace = field(i18nT('tlSettings.space_for_the_videos'), cameraStoreSelect(opsEsp.list, b.timelapses_gb || 5, function (v) { b.timelapses_gb = v || 5; }, rr));
-        if (opsEsp.notice) fSpace.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);font-size:11px;", opsEsp.notice));
+        if (opsEsp.notice) fSpace.appendChild(cameraEl("div", "color:var(--c-notice,#ffb74d);font-size:12px;", opsEsp.notice));
         field(i18nT('tlSettings.max_videos'), cameraStoreSelect([[10, "10"], [30, "30"], [60, "60"], [100, "100"], [200, "200"]], b.timelapses_max || 30, function (v) { b.timelapses_max = Math.round(v) || 30; }, rr));
         field(i18nT('tlSettings.max_captures'), cameraStoreSelect([[100, "100"], [300, "300"], [1000, "1000"], [3000, "3000"]], b.captures_max || 300, function (v) { b.captures_max = Math.round(v) || 300; }, rr));
         field(i18nT('tlSettings.notify_and_wait_before_deleting'), cameraStoreSelect([[1, "1 h"], [6, "6 h"], [24, i18nT('tlSettings.1_day')], [72, i18nT('tlSettings.3_days')], [168, i18nT('tlSettings.7_days')]], b.delete_wait_h || 24, function (v) { b.delete_wait_h = Math.round(v) || 24; }, rr));
@@ -199,7 +264,7 @@
         save.disabled = !changed;
         fg.appendChild(undo);
         fg.appendChild(save);
-        fg.appendChild(cameraEl("span", changed ? "color:var(--c-amber,#ffe082);font-size:12px;" : "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT(changed ? 'tlSettings.there_are_unsaved_changes' : 'tlSettings.saved_on_the_system_for_every')));
+        fg.appendChild(cameraEl("span", changed ? "color:var(--c-amber,#ffe082);font-size:12px;" : "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT(changed ? 'tlSettings.there_are_unsaved_changes' : 'tlSettings.saved_on_the_system_for_every')));
         card.appendChild(fg);
       }
 

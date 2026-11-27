@@ -11,6 +11,12 @@
         description:
           i18nT('main.opens_the_floating_viewer'),
         toggle: cameraToggle,
+        rebuildsOnSignIn: true, // the viewer is rebuilt for the new person by itself (09-camera-session.js): the bar never toggles it after a sign-in...
+        // ...it asks the viewer to open instead (note 10, 2026-11-23): the bar signed the person in from the locked launcher, so the viewer opens as soon
+        // as the rebuild for that person has it (now, or when the build ends)
+        openAfterSignIn: function () {
+          return cameraOpenAfterSignIn();
+        },
         state: function () {
           var open = isCameraOpen();
           var noPanel = !cameraPanelEl; // no camera yet (the service says so) or still loading
@@ -62,7 +68,7 @@
       // it uses only cameras.json (12-cameras.js).
 
       // the <style> elements only the Camera uses leave the page when it stops (the shared ones go with the last plugin: workshopRemoveLeftovers)
-      var CAMERA_OWN_STYLES = ["workshop-tl-css", "workshop-studio-css"];
+      var CAMERA_OWN_STYLES = ["workshop-tl-css", "workshop-studio-css", "workshop-cam-btn-css"];
       workshopOwnStyles(CAMERA_OWN_STYLES);
 
       // MO-7: a reload or closing the tab does not run the plugin's stop: the flash this page switched on is switched off with a request that outlives the page
@@ -74,6 +80,7 @@
         cameraFlashesOff();
         if (cameraStopStreamFn) cameraStopStreamFn();
         cameraCloseOpenViews(); // 13-service.js: the mosaic and the page, with their timers
+        cameraPageNavSheetClose(); // 18-page-tabs.js: the section sheet of a narrow page lives on <body>
         cameraViewTeardown(null); // every view: the cover boxes and the judgement of every picture (14-health.js) go with it
         var panel = document.getElementById(CAMERA_PANEL_ID);
         if (panel) panel.remove();

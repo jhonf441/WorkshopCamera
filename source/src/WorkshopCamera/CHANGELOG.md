@@ -1,5 +1,57 @@
 # WorkshopCamera -- historial de versiones
 
+## 2.18.1 -- 2026-11-23
+
+- ux review of 2.18.0: the compact page header of the family (the lead only for a screen reader) and, on a phone, the figures of the bar left to the Storage tab; the state of the picture keeps the dot and its word on one line with the hint under it on a phone; the cameras and the mode are two groups of the family's segments (Principal | Cama | Todas) and (Foto | Video); the library writes the date and the camera in words ("23-nov 17:03 · Principal", it showed an epoch); the icon of a card title in the colour of the section; the scale reads the family tokens; the Storage settings are rows of the family (name at the left, the control at the right) in two columns, one on a phone, and the settings of the Studio are rows of 48 px with their name in full colour
+
+## 2.18.0 -- 2026-11-23
+
+- Redesign of the whole page and of the floating viewer (owner, 2026-11-23: "the buttons still look too big"; CAMARA-REDISENO.md): page buttons 32 px to see (the main one and the fields 36), every button touched over 40 px; side bar entries of 40 px without a box, with the colour of the open group (Operate, Video quality, Configure); Live in two cards: View (a row of 32 px tools above the picture: cameras, mode, light, focus, the viewer and full screen; the picture; its state in one line) and Actions (capture, record a timelapse, the last file saved); the recovery of a camera is one compact list with one help at its foot (it was seven folds); a failure of the service is the family's outlined note with Retry; the library shows the icons of each card (download, keep, delete with two taps) on 16:9 thumbnails; the floating viewer has two strips of 44 px on a veil with outlined 32 px buttons that fold away after 3 s without a touch, Retry in the bottom strip, 440 x 248 by default; nothing covers a stop
+
+## 2.17.0 -- 2026-11-23
+
+- Owner's notes of 2026-11-23: compact floating viewer (action buttons 40 px, top row 36 px touched over 40, at least 280 px wide, the zoom mark no longer sits on the close button, camera chips named for touch screens, badge text in 600) (note 19); after the PIN asked by the locked launcher the viewer opens by itself, and a role that still cannot see the camera gets the role card (note 10); no layout reads in the zoom and resize gestures, the badge writes only what changed (note 15); on a page narrower than 640 px the side bar is one Section button with a sheet, and every grid fits a 320 px phone (notes 14, 17); timelapse day and time fields with the label above, side by side when there is room, colours that follow the theme, 3:1 field borders (note 7); the storage help folds open under its block; nothing covers a stop: the mosaic background clears DWC's top bar and the control bar, and the Section sheet is non-modal and stays below the floating panels (safety rule)
+
+## 2.16.3 -- 2026-11-23
+
+- optional files are never requested when absent
+
+## 2.16.2 -- 2026-11-22
+
+- viewer button sizes restored
+
+## 2.16.1 -- 2026-11-22
+
+- Floating viewer: the size variables of its buttons survive (close and mode buttons back in their corners, bottom row and resize corner back), test for the variables and the drag
+
+## 2.16.0 -- 2026-11-22
+
+- Controls per camera, range picker, viewer badge
+
+## 2.15.3 -- 2026-11-22
+
+- Rebuild with shared update: start-up card split into modules, neutral Spanish texts, service texts resynced, unused .wf-index rule dropped
+
+## 2.15.2 -- 2026-11-22
+
+- Tuteo in texts (no voseo in es.json).
+
+## 2.15.1 -- 2026-11-22
+
+- Visual review round: single hover and focus for inputs and controls (family styles), 44 px switch and checkbox rows, range picker field 44 px.
+
+## 2.15.0 -- 2026-11-21
+
+- Style unification: Camera help uses the family fold and line, results of page actions are revealed on screen, role notices use the family sentence (Requires the Technician role), 44 px controls, nothing under 12 px, double touches use the family 4000 ms constant.
+
+## 2.14.14 -- 2026-11-21
+
+- Help card readable (own text color and font), one session notice per page, no repeated asks for missing optional files; Jog pendant press feedback and tap-again confirmations; Vision silent on closed connection
+
+## 2.14.13 -- 2026-11-21
+
+- Session notice stacked on narrow panels, dimmed parts named, camera window buttons consistent
+
 ## 2.14.12 -- 2026-11-20
 
 - Own calendar in the date range picker (no native date/time fields); PiHealth: the stored-data table moves to the service
@@ -46,7 +98,7 @@
 
 ## 2.14.1 -- 2026-11-11
 
-- Owner report 2026-11-11: shutdown without session, kiosk PIN pad, hive confirm color, wheel release and Z keys, version in every page bar
+- User report 2026-11-11: shutdown without session, kiosk PIN pad, hive confirm color, wheel release and Z keys, version in every page bar
 
 ## 2.14.0 -- 2026-11-11
 

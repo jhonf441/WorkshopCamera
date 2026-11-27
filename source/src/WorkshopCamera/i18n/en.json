@@ -122,7 +122,7 @@
 		"stopped": "Relay stopped.",
 		"started": "Relay started.",
 		"error_sign_in": "The camera asked for a session or the key of the day expired.",
-		"error_role": "Your role does not allow this. Ask an administrator.",
+		"error_role": "The relay refused this: it requires a role with more access. Ask an administrator.",
 		"error_http": "The camera service answered with an error ({status})."
 	},
 	"service": {
@@ -434,7 +434,7 @@
 		"signed_out_files": "Sign-in required to see the saved videos and captures.",
 		"no_permission_files": "Your role ({role}) cannot see the saved videos and captures.",
 		"hidden_signed_out": "Sign-in required to see the settings and image sections.",
-		"hidden_by_role": "Some sections (settings, cameras, image) require the technician role. Your role: {role}. Ask an administrator for access.",
+		"hidden_by_role": "Some sections (settings, cameras, image) require the Technician role. Your role: {role}. Ask an administrator for access.",
 		"working": "Working",
 		"n_watching": "{n} watching",
 		"system_busy": "system busy",
@@ -565,7 +565,7 @@
 	"noCamera": {
 		"title": "No camera has been added yet",
 		"body": "Captures, timelapse and the Studio need a camera. Add one here and the system starts reading its video by itself: nothing is broken, there is just nothing to read yet.",
-		"ask_technician": "A technician has to add the camera. Ask them to open this page.",
+		"ask_technician": "Adding a camera requires the Technician role. Ask someone with that role to open this page.",
 		"address": "Or type the address of the camera's video",
 		"address_hint": "For an ESP32-camera it looks like http://192.168.1.50:81/stream. Another camera gives its own MJPEG address.",
 		"need_http": "The address has to start with http:// or https://",
@@ -615,9 +615,14 @@
 		"store_lead": "Where it is stored, how much and for how long.",
 		"store_meter": "Videos: {used} GB of the {cap} GB chosen",
 		"notify_yes": "Yes, to the phone",
-		"notify_no": "No"
+		"notify_no": "No",
+		"section": "Section"
 	},
 	"live": {
+		"actions": "Actions",
+		"last_saved": "Last saved: {name} · {when}",
+		"nothing_saved": "No captures or videos yet.",
+		"fullscreen": "Full screen",
 		"capture_unavailable": "The camera {name} does not respond: it cannot capture now. Check that it is on and connected.",
 		"timelapse_unavailable": "No camera responds: a timelapse cannot be recorded now. Check that they are on and connected.",
 		"lead": "Watch the camera, take a capture or record a timelapse.",
@@ -648,6 +653,9 @@
 		"close_viewer": "Close the floating viewer",
 		"viewer_is_open": "The floating viewer is open on this screen.",
 		"viewer_hint": "Live video, zoom and full screen.",
+		"capture": "Capture",
+		"capture_all": "Capture all",
+		"image_custom": "Custom",
 		"no_photo_yet": "No photo of this camera in this recording yet."
 	},
 	"library": {
@@ -678,7 +686,6 @@
 	},
 	"recover": {
 		"title": "Help to bring the camera back",
-		"what_is_it": "What it is and what it is for",
 		"h_what": "What it is:",
 		"h_why": "What for:",
 		"h_missing": "If it is not done:",
@@ -730,7 +737,7 @@
 		"relay_what": "Stop and start again the process of the system that reads the camera and shares its video with every screen.",
 		"relay_why": "If the camera answers but the relay kept a dead connection, restarting it opens the camera again.",
 		"relay_missing": "The relay may keep waiting for frames that never come, even when the camera is fine again.",
-		"relay_how": "Two taps: it cuts the video for EVERY screen for a few seconds and comes back by itself. Only a technician does it.",
+		"relay_how": "Two taps: it cuts the video for EVERY screen for a few seconds and comes back by itself. It requires the Technician role.",
 		"service": "Check the system service",
 		"service_what": "The workshop service, the plugin that runs the camera relay on the system.",
 		"service_why": "If it is stopped, no camera can be seen, however good it is.",

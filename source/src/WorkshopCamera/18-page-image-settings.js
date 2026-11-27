@@ -100,7 +100,7 @@
       }
 
       function cameraImageChip(text, color) {
-        return cameraEl("span", "font-size:10px;background:" + color + ";color:#000;border-radius:8px;padding:1px 6px;font-weight:500;", text);
+        return cameraEl("span", "font-size:12px;background:" + color + ";color:#000;border-radius:8px;padding:1px 6px;font-weight:500;", text);
       }
 
       // The profiles of the service as compact chips, the active one marked and only ITS description under them; one tap applies and saves it.
@@ -120,7 +120,7 @@
         });
         box.appendChild(chips);
         if (activeId) box.appendChild(cameraEl("div", null, cameraProfileInfo(activeId)[1])).className = "ctl-muted";
-        var label = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;cursor:pointer;");
+        var label = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:40px;cursor:pointer;");
         var cb = cameraEl("input", "width:18px;height:18px;flex:none;");
         cb.type = "checkbox";
         cb.checked = !!d.auto;

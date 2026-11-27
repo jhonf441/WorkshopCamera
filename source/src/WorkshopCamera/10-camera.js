@@ -1,7 +1,7 @@
       // ---- 2. Floating camera panel (the viewer) ----
       //
       // informe-07: the viewer is for LOOKING: the picture, close, resize, zoom, the camera selector, the photo / live-video button, the flash
-      // (when the camera has one and the view can), the mosaic of all the cameras, the quick capture (the owner's decision) and ONE button that opens the
+      // (when the camera has one and the view can), the mosaic of all the cameras, the quick capture (a project decision) and ONE button that opens the
       // page of the plugin (capture, timelapse, cameras, image settings, focus, relay, gallery: 17-gallery.js and 18-page-*.js).
       // 2026-10-08 (v3): there is NO round floating button (FAB) any more. The
       // launcher is the camera icon of the sidebar (section 0):
@@ -14,15 +14,17 @@
       // duplicate copies of v1).
 
       var CAMERA_PANEL_ID = "workshop-camera-panel";
-      var CAMERA_W = 340; // wide enough for the four round buttons of the bottom row and the label of the button to the page
-      var CAMERA_H = 226;
-      // Smallest the viewer can be made (2026-11-04): the top row (flash, mode, close), the badge under it, the bottom row (four round buttons, the
-      // page button as an icon, the corner) and, when the picture fails, the Retry and "Help" buttons stacked in the middle must all fit without
-      // covering each other (owner report 2026-11-04: at 190x120 they covered the badge text "does not respond"). Under CAMERA_COMPACT_W the
+      var CAMERA_W = 440; // wide enough for the four round buttons of the bottom row and the label of the button to the page
+      var CAMERA_H = 248; // 16:9 of the picture plus the strips (CAMARA-REDISENO.md)
+      // Smallest the viewer can be made (2026-11-04): the top row (mode, flash, close), the badge under it, the bottom row (four round buttons, the
+      // page button as an icon, the corner) and, when the picture fails, the Retry and "Help" buttons side by side in the middle must all fit without
+      // covering each other (user report 2026-11-04: at 190x120 they covered the badge text "does not respond"). Under CAMERA_COMPACT_W the
       // buttons with a word become icons (the page button; the camera chips show their number, the name stays in the tooltip).
-      var CAMERA_MIN_W = 250;
-      var CAMERA_MIN_H = 190;
-      var CAMERA_COMPACT_W = 300;
+      // 2026-11-23 (redesign): 32 px buttons in two strips (11-panel-parts.js): the bottom row is 6 + 5 x (32 + 8) + 28 = 234 px, so the viewer fits a
+      // 320 px phone (304 px of window) with room to spare
+      var CAMERA_MIN_W = 280;
+      var CAMERA_MIN_H = 158; // the two strips of 44 px and 70 px of picture
+      var CAMERA_COMPACT_W = 400; // under it the page button is a round icon (icon + word need about 160 px beside the 40 px buttons)
       var CAMERA_MAX_W = 640;
       var CAMERA_MAX_H = 480;
       var CAMERA_SIZE_KEY = "workshopCameraSize";
@@ -131,14 +133,20 @@
           cameraAddressState = cameraStartupStateCameras(cameraList, relay);
           workshopNotify();
           var url = cameraUrlMain();
-          // no camera yet, the service does not answer ("na") or there is no address: no viewer, the cover says which (never a panel with an empty URL)
-          if (cameraAddressState === "missing" || cameraAddressState === "na" || !url) { cameraSessionCoverRender(); return; }
+          var wished = cameraOpenWishTake(); // the person signed in from the locked launcher and is waiting for the viewer (note 10, 09-camera-session.js)
+          // no camera yet, the service does not answer ("na") or there is no address: no viewer, the cover says which (never a panel with an empty URL);
+          // the person who asked for the viewer through the PIN gets the cover open, the same as tapping the tile
+          if (cameraAddressState === "missing" || cameraAddressState === "na" || !url) {
+            if (wished) cameraSessionCoverOpen = true;
+            cameraSessionCoverRender();
+            return;
+          }
           if (pluginStopped) return;
           if (document.getElementById(CAMERA_PANEL_ID)) return;
           cameraSessionCoverOpen = false;
           cameraSessionCoverRender();
           buildCameraPanel(url);
-          if (isCameraExpanded()) {
+          if (wished || isCameraExpanded()) {
             cameraExpand();
           } else {
             cameraCollapse(true);
@@ -159,7 +167,7 @@
       }
 
       function cameraToggle() {
-        if (cameraSessionLock()) return cameraSessionLockTap(); // no session / a role without the camera: the name + PIN dialog, nothing opens (09-camera-session.js)
+        if (cameraSessionLock()) return cameraSessionLockTap(true); // no session / a role without the camera: the name + PIN dialog, the viewer opens once it is accepted (09-camera-session.js)
         if (!cameraPanelEl) return cameraSessionToggleCover(); // no panel (09-camera-session.js): the cover tells why
         if (isCameraOpen()) cameraCollapse();
         else cameraExpand();
@@ -189,7 +197,7 @@
         var cameraCurrent = null; // the camera of the list that is being seen (12-cameras.js)
         var health = null; // the judgement of the picture on screen (14-health.js): null while the viewer is closed
 
-        var panel = cameraPanelBox(savedSize); // 11-panel-parts.js
+        var panel = cameraPanelBox(savedSize), strips = cameraStripsAuto(panel); // 11-panel-parts.js: the box, and its strips that fold away after 3 s without a touch
 
         var img = document.createElement("img");
         img.alt = i18nT('main.camera');
@@ -237,7 +245,7 @@
         function paintHealth() {
           var h = health && health.h;
           modeBadge(liveMode, h);
-          var alive = !h || h.state === "fresh" || h.state === "waiting";
+          var alive = !h || h.state === "fresh" || h.state === "waiting"; strips.alive(alive); // the strips fold away only while the picture is alive; failing, the capture and the zoom step aside for Retry
           helpBtn.style.display = !alive && cameraPageRegistered ? "" : "none"; // locked (not hidden) for a view without the gallery
           helpBtn.disabled = !cameraCanDo("gallery");
           viewBtn.style.display = alive ? "none" : ""; if (cameraBlackFlash(h, flashBtn)) viewBtn.style.display = helpBtn.style.display = "none"; // Retry whenever the picture is not alive, in either mode; a black one with the flash off is a dark room (11-panel-parts.js)
@@ -411,7 +419,7 @@
 
 
         // Camera selector (top, center): only with 2 or more cameras (11-panel-parts.js).
-        var renderSelector = cameraSelectorAssemble(panel);
+        var renderSelector = cameraSelectorAssemble(panel, function (name) { notify(name); }); // the name of a chip, said in the viewer's own notice
         renderSelector();
 
         // Changing camera: it cuts what is being seen and starts the new one
@@ -454,7 +462,7 @@
         var noticeThe = document.createElement("div");
         noticeThe.setAttribute("data-workshop-i18n", "");
         noticeThe.style.cssText =
-          "position:absolute;left:50%;bottom:36px;transform:translateX(-50%);max-width:90%;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,0.75);color:#fff;font:12px Roboto,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;display:none;pointer-events:none;";
+          "position:absolute;left:50%;bottom:calc(var(--cam-strip) + 6px);transform:translateX(-50%);max-width:90%;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,0.75);color:#fff;font:12px Roboto,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;display:none;pointer-events:none;";
         panel.appendChild(noticeThe);
         var noticeTimer = null;
         function notify(text) {
@@ -463,19 +471,19 @@
           clearTimeout(noticeTimer);
           noticeTimer = setTimeout(function () { noticeThe.style.display = "none"; }, 3500);
         }
-        var capBtn = botonAbajo(4, i18nT('camera.capture_photo_with_date_job_and'),
+        var capBtn = botonAbajo(0, i18nT('camera.capture_photo_with_date_job_and'),
           '<path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"/>',
           function () { cameraPanelCapture(cameraCurrent, notify); });
-        botonAbajo(34, i18nT('camera.all_cameras_grid'), '<path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>', function () { cameraOpenMosaic(); });
-        botonAbajo(64, i18nT('camera.zoom_in_digital_zoom'), '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>', function () { zoom.more(); });
-        botonAbajo(94, i18nT('camera.zoom_out'), '<path d="M19 13H5v-2h14v2z"/>', function () { zoom.minus(); });
+        botonAbajo(1, i18nT('camera.all_cameras_grid'), '<path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>', function () { cameraOpenMosaic(); });
+        botonAbajo(2, i18nT('camera.zoom_in_digital_zoom'), '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>', function () { zoom.more(); });
+        botonAbajo(3, i18nT('camera.zoom_out'), '<path d="M19 13H5v-2h14v2z"/>', function () { zoom.minus(); });
         // the way to the page of the plugin (18-page-tabs.js): capture, timelapse, cameras, image settings, focus, relay and the gallery live there
         var pageBtn = cameraPageButton(panel);
         cameraRoleBind(panel, { capture: capBtn, page: pageBtn }); // 09-camera-roles.js: what each view shows
         // what depends on the camera that is being seen: the quick capture needs the relay, the flash needs the camera to have one and the view to allow it
         function paintDown() {
           var rid = cameraRelayId(cameraCurrent);
-          capBtn.style.opacity = rid ? "1" : "0.4";
+          capBtn.classList.toggle("cam-off", !rid); // dimmed by the sheet, so the idle strips still fold it away
           var shown = img.style.display === "block" || img.style.getPropertyValue("display") === "block";
           if (shown) {
             flashBtn.style.display = cameraFlashShown(cameraCurrent, esEsp32 && cameraHasFlash()) ? "" : "none";

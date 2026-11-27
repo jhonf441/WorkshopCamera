@@ -146,7 +146,7 @@
          [i18nT("studio.est_speed"), "x" + Math.round(secs / Math.max(1, frames / fps))],
          [i18nT("studio.est_stills"), t.keep_frames ? "~" + Math.round(frames * cams * 0.15) + " MB" : "-"]].forEach(function (e) {
           var d = cameraEl("div", "");
-          d.appendChild(cameraEl("span", "color:var(--c-sec);font-size:11px;", e[0]));
+          d.appendChild(cameraEl("span", "color:var(--c-sec);font-size:12px;", e[0]));
           d.appendChild(cameraEl("b", null, e[1]));
           grid.appendChild(d);
         });

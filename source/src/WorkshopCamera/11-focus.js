@@ -255,7 +255,8 @@
         var frame = cameraEl("div", "position:absolute;left:30%;top:30%;width:40%;height:40%;border:2px dashed #fff59d;box-sizing:border-box;pointer-events:none;display:none;");
         box.appendChild(frame);
         parent.appendChild(box);
-        if (!tile) parent.appendChild(cameraEl("div", null, i18nT(u.photo ? 'image.preview_hint' : 'image.preview_video_hint', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 }))).className = "ctl-muted"; // a camera with no still image (or the video mode of the Live tab) says it is video
+        // a camera with no still image (or the video mode) says it is video; the Live tab says it with its mode chips and keeps ONE line under the picture
+        if (!tile && !(opts && opts.live)) parent.appendChild(cameraEl("div", null, i18nT(u.photo ? 'image.preview_hint' : 'image.preview_video_hint', { s: CAMERA_SNAPSHOT_POLL_MS / 1000 }))).className = "ctl-muted";
         F.frame = frame;
         if (tile) cameraFocusTiles.push(F); else cameraFocusCurrent = F;
         F.health = cameraHealthWatch(img, cam, { video: !u.photo, photo: u.photo, onChange: function () { if (F.healthUi) F.healthUi.paint(); }, reload: function () { cameraFocusPhoto(F); } });

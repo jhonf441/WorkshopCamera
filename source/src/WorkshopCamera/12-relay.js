@@ -10,6 +10,8 @@
       // The state comes from the service (camera.status), never from probing :8090. One plain object holds it (cameraRelayModel); the functions
       // below take that object (docs-internal/ARQUITECTURA.md).
 
+      var CAMERA_RELAY_ARM_MS = 4000; // = WORKSHOP_ARM_MS (src/_shared/00-arm.js); tests/arm-ms.test.js keeps them equal
+
       // The state of one tab. status = camera.status ({running, configured, clients, url, port...}, {error}, or null while it is unread);
       // draft = the address typed for the camera the relay reads (null = untouched); msg = the last result of an action; armed = the timer of
       // the pending second tap of "Stop relay" (null = none). alive() says whether the tab is still on screen; repaint() draws it again;
@@ -86,7 +88,7 @@
           rs.armed = setTimeout(function () {
             rs.armed = null;
             if (rs.alive()) rs.repaint();
-          }, 4000);
+          }, CAMERA_RELAY_ARM_MS);
           rs.repaint();
           return;
         }

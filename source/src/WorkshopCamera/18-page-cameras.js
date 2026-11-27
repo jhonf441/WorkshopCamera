@@ -71,7 +71,7 @@
         var text = cameraEl("div", "flex:1;min-width:0;cursor:pointer;");
         text.appendChild(cameraEl("div", "font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", cam.name + (current ? "  " + i18nT('cameras.watching') : "")));
         text.appendChild(cameraEl("div", "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", cameraCamerasAddress(S, cam))).className = "ctl-muted";
-        var state = cameraEl("div", "font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;");
+        var state = cameraEl("div", "font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;");
         text.appendChild(state);
         lines.push({ rid: cameraRelayId(cam), el: state });
         text.addEventListener("click", function () {

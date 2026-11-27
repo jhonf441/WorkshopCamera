@@ -122,7 +122,7 @@
 		"stopped": "Relay detenido.",
 		"started": "Relay iniciado.",
 		"error_sign_in": "La cámara pidió iniciar sesión o la clave del día venció.",
-		"error_role": "Tu rol no permite esto. Pídeselo a un administrador.",
+		"error_role": "El relé lo rechazó: requiere un rol con más acceso. Pídeselo a un administrador.",
 		"error_http": "El servicio de la cámara respondió con un error ({status})."
 	},
 	"service": {
@@ -300,7 +300,7 @@
 		"building_video": "Armando video",
 		"keep_all": "Conservar todos",
 		"delete_now": "Borrar ya",
-		"the_count_or_space_limits_were": "Se pasaron los topes de cantidad o de espacio. Si no haces nada, se borran en la fecha de cada uno. Conserva los que quieras guardar (no se borran solos) o descargalos antes.",
+		"the_count_or_space_limits_were": "Se pasaron los topes de cantidad o de espacio. Si no haces nada, se borran en la fecha de cada uno. Conserva los que quieras guardar (no se borran solos) o descárgalos antes.",
 		"no_longer_kept": "Ya no está conservado.",
 		"kept_it_won_t_be_deleted": "Conservado: no se borra solo.",
 		"name_changed": "Nombre cambiado.",
@@ -434,7 +434,7 @@
 		"signed_out_files": "Requiere iniciar sesión para ver los videos y las capturas guardados.",
 		"no_permission_files": "Tu rol ({role}) no puede ver los videos y las capturas guardados.",
 		"hidden_signed_out": "Requiere iniciar sesión para ver las secciones de ajustes e imagen.",
-		"hidden_by_role": "Algunas secciones (ajustes, cámaras, imagen) requieren el rol técnico. Tu rol: {role}. Pide el acceso a un administrador.",
+		"hidden_by_role": "Algunas secciones (ajustes, cámaras, imagen) requieren el rol Técnico. Tu rol: {role}. Pide el acceso a un administrador.",
 		"working": "Funciona",
 		"n_watching": "{n} mirando",
 		"system_busy": "equipo ocupado",
@@ -565,7 +565,7 @@
 	"noCamera": {
 		"title": "Aún no hay ninguna cámara añadida",
 		"body": "Las capturas, el timelapse y el Estudio necesitan una cámara. Añade una aquí y el sistema empieza a leer su video solo: no hay nada dañado, solo falta algo que leer.",
-		"ask_technician": "Un técnico tiene que añadir la cámara. Pídele que abra esta página.",
+		"ask_technician": "Añadir una cámara requiere el rol Técnico. Pídele a alguien con ese rol que abra esta página.",
 		"address": "O escribe la dirección del video de la cámara",
 		"address_hint": "En una cámara ESP32 se ve así: http://192.168.1.50:81/stream. Otra cámara da su propia dirección MJPEG.",
 		"need_http": "La dirección tiene que empezar con http:// o https://",
@@ -615,9 +615,14 @@
 		"store_lead": "Dónde se guarda, cuánto y por cuánto tiempo.",
 		"store_meter": "Videos: {used} GB de los {cap} GB elegidos",
 		"notify_yes": "Sí, al celular",
-		"notify_no": "No"
+		"notify_no": "No",
+		"section": "Sección"
 	},
 	"live": {
+		"actions": "Acciones",
+		"last_saved": "Último guardado: {name} · {when}",
+		"nothing_saved": "Todavía no hay capturas ni videos.",
+		"fullscreen": "Pantalla completa",
 		"capture_unavailable": "La cámara {name} no responde: no se puede capturar ahora. Revisa que esté encendida y conectada.",
 		"timelapse_unavailable": "Ninguna cámara responde: no se puede grabar un timelapse ahora. Revisa que estén encendidas y conectadas.",
 		"lead": "Mira la cámara, saca una captura o graba un timelapse.",
@@ -648,6 +653,9 @@
 		"close_viewer": "Cerrar el visor flotante",
 		"viewer_is_open": "El visor flotante está abierto en esta pantalla.",
 		"viewer_hint": "Video en vivo, zoom y pantalla completa.",
+		"capture": "Capturar",
+		"capture_all": "Capturar todas",
+		"image_custom": "Personalizado",
 		"no_photo_yet": "Todavía no hay foto de esta cámara en esta grabación."
 	},
 	"library": {
@@ -678,7 +686,6 @@
 	},
 	"recover": {
 		"title": "Ayuda para recuperar la cámara",
-		"what_is_it": "Qué es y para qué sirve",
 		"h_what": "Qué es:",
 		"h_why": "Para qué:",
 		"h_missing": "Si no se hace:",
@@ -730,7 +737,7 @@
 		"relay_what": "Parar y volver a arrancar el proceso del sistema que lee la cámara y reparte su video a todas las pantallas.",
 		"relay_why": "Si la cámara contesta pero el relay se quedó con una conexión muerta, reiniciarlo la abre de nuevo.",
 		"relay_missing": "El relay puede quedarse esperando cuadros que nunca llegan, aunque la cámara ya esté bien.",
-		"relay_how": "Dos toques: corta el video a TODAS las pantallas unos segundos y vuelve solo. Solo lo hace un técnico.",
+		"relay_how": "Dos toques: corta el video a TODAS las pantallas unos segundos y vuelve solo. Requiere el rol Técnico.",
 		"service": "Revisar el servicio del sistema",
 		"service_what": "El servicio del taller, el complemento que lleva el relay de la cámara en el sistema.",
 		"service_why": "Si está parado, ninguna cámara se ve, por buena que esté.",

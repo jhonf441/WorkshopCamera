@@ -6,12 +6,12 @@
       // A labelled text field of the page: label, current value, a help line (or ""), onChange(text).
       function cameraField(label, value, help, onChange) {
         var box = cameraEl("div", "display:flex;flex-direction:column;gap:2px;margin-top:6px;");
-        box.appendChild(cameraEl("label", "color:var(--c-sec,#b0bec5);font-size:11px;", label));
+        box.appendChild(cameraEl("label", "color:var(--c-sec,#b0bec5);font-size:12px;", label));
         var input = cameraEl("input", "width:100%;box-sizing:border-box;");
         input.value = value;
         input.addEventListener("input", function () { onChange(input.value); });
         box.appendChild(input);
-        if (help) box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:10px;", help));
+        if (help) box.appendChild(workshopHelpLineEl(help)); // the family's short help, in line
         return box;
       }
 
@@ -27,7 +27,7 @@
         l.appendChild(cb);
         l.appendChild(document.createTextNode(i18nT('cameras.it_s_an_esp32_camera_flash')));
         box.appendChild(l);
-        if (e.esp32 && e.flash && e.flash.capable === false) box.appendChild(el("div", "font-size:10px;color:var(--c-sec,#b0bec5);margin-left:22px;", i18nT('cameras.no_flash_detected_the_viewer_doesn')));
+        if (e.esp32 && e.flash && e.flash.capable === false) box.appendChild(el("div", "font-size:12px;color:var(--c-sec,#b0bec5);margin-left:22px;", i18nT('cameras.no_flash_detected_the_viewer_doesn')));
         if (e.esp32) {
           var lr = el("label", "display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;");
           var cr = el("input");
@@ -49,7 +49,7 @@
           line.appendChild(btn(o[1], "flex:1 1 0;min-width:0;white-space:nowrap;" + ((e.flash_source || "camera") === o[0] ? "border:1px solid #1976d2;" : ""), function () { e.flash_source = o[0]; render(); }));
         });
         row.appendChild(line);
-        if (e.flash_source === "strip") row.appendChild(el("div", "font-size:10px;color:var(--c-sec,#b0bec5);", i18nT('cameras.flash_light_strip_help')));
+        if (e.flash_source === "strip") row.appendChild(el("div", "font-size:12px;color:var(--c-sec,#b0bec5);", i18nT('cameras.flash_light_strip_help')));
         return row;
       }
 

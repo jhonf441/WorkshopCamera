@@ -140,7 +140,7 @@
             if (reason.style) reason.style.margin = "4px 8px";
             panel.appendChild(reason);
           }
-          parts.page.style.display = pageHere ? "flex" : "none"; // 18-page-tabs.js
+          parts.page.style.display = pageHere ? "" : "none"; // the sheet (cam-btn) gives it its layout back // 18-page-tabs.js
           parts.page.disabled = !canGallery;
         }
         apply();

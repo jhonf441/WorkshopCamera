@@ -109,7 +109,7 @@
           } else {
             if (tl.assembling) box.appendChild(cameraEl("div", "padding:6px 8px;border-radius:6px;border:1px solid rgba(128,128,128,0.35);font-size:12px;", i18nT('timelapse.building_the_timelapse_video')));
             var row = cameraEl("div", "display:flex;gap:6px;align-items:center;");
-            var inp = cameraEl("input", "flex:1;min-width:0;min-height:32px;padding:4px 8px;border-radius:6px;border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;");
+            var inp = cameraEl("input", "flex:1;min-width:0;min-height:36px;padding:4px 8px;border-radius:6px;border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;");
             inp.placeholder = i18nT('timelapse.name_optional');
             inp.maxLength = 60;
             inp.value = nombre;
@@ -139,9 +139,9 @@
             row.appendChild(startBtn);
             if (!noStart) box.appendChild(row);
             cameraAvailLock(startBtn, cameraAnyAvailability(cameraState && cameraState.cameras), noStart ? null : box); // A10: no camera responds -> grey, with the reason below
-            if (!noStart) box.appendChild(cameraEl("div", "font-size:11px;color:var(--c-sec,#b0bec5);", i18nT('timelapse.by_hand_records_with_the_cameras')));
+            if (!noStart) box.appendChild(cameraEl("div", "font-size:12px;color:var(--c-sec,#b0bec5);", i18nT('timelapse.by_hand_records_with_the_cameras')));
             if (tl.disk_free_gb != null)
-              box.appendChild(cameraEl("div", "font-size:11px;color:" + (tl.disk_free_gb < 4 ? "var(--c-notice,#ffb74d)" : "var(--c-sec,#b0bec5)") + ";",
+              box.appendChild(cameraEl("div", "font-size:12px;color:" + (tl.disk_free_gb < 4 ? "var(--c-notice,#ffb74d)" : "var(--c-sec,#b0bec5)") + ";",
                 i18nT('timelapse.free_space_on_the_system', { gb: tl.disk_free_gb })));
           }
           if (tl.scheduled) {
@@ -243,7 +243,7 @@
         });
         box.appendChild(line(i18nT('common.photos'), selDisp));
         if ((t.trigger || "time") === "layer")
-          box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('timelapse.in_printing_jobs_it_takes_a')));
+          box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT('timelapse.in_printing_jobs_it_takes_a')));
         box.appendChild(
           line((t.trigger || "time") === "layer" ? i18nT('timelapse.without_layers_by_hand_one_photo') : i18nT('common.one_photo_every'), numero(t.each_s || 10, 2, 600, 1, function (v) {
             t.each_s = Math.round(v);
@@ -251,7 +251,7 @@
         );
         }
         if (verRecord) {
-        var ls = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;");
+        var ls = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:40px;");
         var cs2 = cameraEl("input");
         cs2.type = "checkbox";
         cs2.checked = !!t.stamp;
@@ -267,7 +267,7 @@
         }
         // -- how it is assembled (with 2 or more cameras) --
         if (verVideo && chosen.length < 2 && part) {
-          box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('timelapse.with_a_single_camera_you_get')));
+          box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT('timelapse.with_a_single_camera_you_get')));
         }
         if (verVideo && chosen.length > 1) {
           box.appendChild(title(i18nT('common.how_the_video_is_built')));
@@ -280,7 +280,7 @@
             var on = t.armed === o[0];
             var b = cameraEl("div", "display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid " + (on ? "#1976d2" : "rgba(255,255,255,0.2)") + ";background:" + (on ? "rgba(25,118,210,0.22)" : "transparent") + ";");
             b.appendChild(cameraEl("div", "font-weight:bold;", o[1]));
-            b.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", o[2]));
+            b.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", o[2]));
             b.addEventListener("click", function () {
               t.armed = o[0];
               rerender();
@@ -316,7 +316,7 @@
           rerender();
         });
         box.appendChild(line(i18nT('common.stops_by_itself_after'), selMax));
-        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('timelapse.applies_to_manual_ones_and_to')));
+        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT('timelapse.applies_to_manual_ones_and_to')));
         }
         if (!verVideo) return box;
         // -- video --
@@ -339,7 +339,7 @@
           rerender();
         });
         box.appendChild(line(i18nT('common.speed'), sel));
-        var lt = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;");
+        var lt = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:40px;");
         var ct = cameraEl("input");
         ct.type = "checkbox";
         ct.checked = !!t.title;
@@ -368,7 +368,7 @@
           lTit.style.marginLeft = "26px";
           box.appendChild(lTit);
         }
-        var ld = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:28px;");
+        var ld = cameraEl("label", "display:flex;align-items:center;gap:8px;min-height:40px;");
         var cd = cameraEl("input");
         cd.type = "checkbox";
         cd.checked = !!t.deflicker;
@@ -387,7 +387,7 @@
         );
         var sec = Math.max(2, t.each_s || 10);
         var photos = Math.round(3600 / sec);
-        var res = cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;");
+        var res = cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;");
         res.appendChild(cameraEl("span", null, i18nT('timelapse.one_hour_of_recording_gives')));
         res.appendChild(document.createTextNode(" " + photos + " "));
         res.appendChild(cameraEl("span", null, i18nT('timelapse.photos_per_camera_and')));
@@ -406,7 +406,7 @@
         var box = cameraEl("div", "display:flex;flex-direction:column;gap:10px;");
         box.className = "ctl-tlform";
         box.appendChild(cameraEl("div", "", i18nT('live.record_timelapse'))).className = "ctl-group-t";
-        var selCss = "padding:4px;min-height:32px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
+        var selCss = "padding:4px;min-height:36px;border-radius:4px;background:var(--c-field,#1e272c);color:var(--c-text,#fff);border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));font:inherit;";
         var when = cameraEl("select", selCss);
         [["job", i18nT('live.when_job')], ["now", i18nT('live.when_now')], ["schedule", i18nT('live.when_schedule')]].forEach(function (op) {
           var e = cameraEl("option", null, op[1]);
@@ -440,7 +440,7 @@
         var more = cameraEl("details", "");
         more.open = !!f.more;
         more.addEventListener("toggle", function () { f.more = more.open; });
-        more.appendChild(cameraEl("summary", "cursor:pointer;font-weight:600;min-height:32px;", i18nT('live.more_options')));
+        more.appendChild(cameraEl("summary", "cursor:pointer;font-weight:600;min-height:40px;display:flex;align-items:center;", i18nT('live.more_options')));
         more.appendChild(cameraTlSettings(o.t, o.rerender, "more"));
         var link = cameraEl("div", "font-size:12px;margin-top:8px;");
         link.appendChild(document.createTextNode(i18nT('live.frame_color_delivery') + " "));
@@ -473,35 +473,89 @@
       // Schedule (2026-10-10, advanced functions): start and/or stop at a
       // time. Without "Starts" = starts now and stops at the time; without "Stops" = continues
       // until Stop or the maximum duration. The Pi does it (schedule.json).
-      // same field look as the other inputs of the plugins (dark field, 32 px, dark picker)
-      var CAMERA_CSS_FIELD = "min-height:32px;padding:4px 8px;border-radius:4px;border:1px solid var(--c-field-edge,rgba(255,255,255,0.3));background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;box-sizing:border-box;color-scheme:dark;";
+      // the field box of the Camera page (owner 2026-11-23: fields 36 px), radius 6, the control border (--c-field-edge = --wf-control-line); the colour scheme of the
+      // browser's own parts (caret, autofill) follows the theme of the page (the .ctl rules in 18-tl-settings.js), never a fixed dark one
+      var CAMERA_CSS_FIELD = "min-height:36px;padding:4px 12px;border-radius:6px;border:1px solid var(--c-field-edge,#8c8c8c);background:var(--c-field,#1e272c);color:var(--c-text,#fff);font:inherit;font-size:14px;box-sizing:border-box;";
+      // the label of a field: ABOVE its box, 13/500, one line (ellipsis, the whole text in the tooltip), like workshopFieldEl (criteria C3)
+      var CAMERA_CSS_LABEL = "display:block;font-size:13px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+      function cameraTlLabel(text, forId) {
+        var l = cameraEl("label", CAMERA_CSS_LABEL, text);
+        l.title = text;
+        if (forId) l.setAttribute("for", forId);
+        return l;
+      }
+      var cameraTlFieldSeq = 0; // the ids that tie each label to its box
       function cameraTlSchedule(alChange) {
-        var box = cameraEl("div", "display:flex;flex-direction:column;gap:8px;font-size:12px;");
+        var box = cameraEl("div", "display:flex;flex-direction:column;gap:12px;font-size:12px;");
+        var lang = String((document.documentElement && document.documentElement.lang) || "es").slice(0, 2);
+        // Starts and Stops side by side when there is room (each field at least 200 px), one under the other on a phone; the boxes line up at the bottom
+        var row = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px 16px;align-items:end;");
+        box.appendChild(row);
+        // a day and a time written like the time range of the gallery (04-range-picker.js: DD/MM/YYYY in Spanish, YYYY/MM/DD in English; HH:MM),
+        // the same fields in every plugin (owner, 2026-11-23): the native datetime-local field opened its own black popup
         function field(text) {
-          var f = cameraEl("label", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;");
-          f.appendChild(cameraEl("span", "min-width:70px;", text));
-          var i = cameraEl("input", CAMERA_CSS_FIELD + "min-width:170px;");
-          i.type = "datetime-local";
-          f.appendChild(i);
-          box.appendChild(f);
-          return i;
+          var f = cameraEl("div", "display:flex;flex-direction:column;gap:4px;min-width:0;");
+          var id = "workshop-camera-tl-" + ++cameraTlFieldSeq;
+          f.appendChild(cameraTlLabel(text, id));
+          var boxes = cameraEl("div", "display:flex;gap:8px;min-width:0;");
+          var day = cameraEl("input", CAMERA_CSS_FIELD + "flex:1 1 128px;min-width:0;max-width:160px;");
+          day.id = id;
+          day.type = "text";
+          day.setAttribute("inputmode", "numeric");
+          day.setAttribute("autocomplete", "off");
+          day.placeholder = i18nT('core.range_format');
+          var time = cameraEl("input", CAMERA_CSS_FIELD + "flex:0 0 84px;width:84px;");
+          time.type = "text";
+          time.setAttribute("inputmode", "numeric");
+          time.setAttribute("autocomplete", "off");
+          time.maxLength = 5;
+          time.placeholder = "HH:MM";
+          time.setAttribute("aria-label", text + " HH:MM");
+          var mark = function () {
+            var bad = !!day.value.trim() && !workshopRangeParseDayText(day.value, lang);
+            day.style.borderColor = bad ? "var(--c-error,#d32f2f)" : "";
+            day.setAttribute("aria-invalid", bad ? "true" : "false");
+            var badT = !!time.value.trim() && !workshopRangeParseTimeText(time.value);
+            time.style.borderColor = badT ? "var(--c-error,#d32f2f)" : "";
+            time.setAttribute("aria-invalid", badT ? "true" : "false");
+          };
+          day.addEventListener("input", mark);
+          time.addEventListener("input", mark);
+          boxes.appendChild(day);
+          boxes.appendChild(time);
+          f.appendChild(boxes);
+          row.appendChild(f);
+          return { day: day, time: time };
         }
         var iSince = field(i18nT('timelapse.starts'));
         var iUntil = field(i18nT('timelapse.stops'));
-        var fn = cameraEl("label", "display:flex;align-items:center;gap:6px;flex-wrap:wrap;");
-        fn.appendChild(cameraEl("span", "min-width:70px;", i18nT('common.name')));
-        var iNom = cameraEl("input", CAMERA_CSS_FIELD + "min-width:170px;");
+        var fn = cameraEl("div", "display:flex;flex-direction:column;gap:4px;min-width:0;max-width:360px;");
+        var nameId = "workshop-camera-tl-" + ++cameraTlFieldSeq;
+        fn.appendChild(cameraTlLabel(i18nT('common.name'), nameId));
+        var iNom = cameraEl("input", CAMERA_CSS_FIELD + "width:100%;min-width:0;");
+        iNom.id = nameId;
         iNom.type = "text";
         iNom.maxLength = 60;
         iNom.placeholder = i18nT('timelapse.optional');
         fn.appendChild(iNom);
         box.appendChild(fn);
         var msg = cameraEl("div", "font-size:12px;");
+        // seconds of the written day and time (the time alone means today; the day alone, its midnight); 0 = empty; -1 = written but not a real day/time
         function ts(i) {
-          return i.value ? Math.round(new Date(i.value).getTime() / 1000) : 0;
+          var dv = i.day.value.trim(), tv = i.time.value.trim();
+          if (!dv && !tv) return 0;
+          var iso = dv ? workshopRangeParseDayText(dv, lang) : workshopRangeIso(new Date());
+          var hm = tv ? workshopRangeParseTimeText(tv) : "00:00";
+          var d = iso && hm ? workshopRangeParse(iso + "T" + hm) : null;
+          return d ? Math.round(d.getTime() / 1000) : -1;
         }
         box.appendChild(cameraBtn(i18nT('common.schedule'), "background:#1976d2;color:#fff;align-self:flex-start;", function () {
           var d = ts(iSince), h = ts(iUntil);
+          if (d < 0 || h < 0) {
+            msg.style.color = "var(--c-error,#ef9a9a)";
+            msg.textContent = i18nT(d < 0 ? 'core.range_err_from' : 'core.range_err_to');
+            return;
+          }
           if (!d && !h) {
             msg.style.color = "var(--c-error,#ef9a9a)";
             msg.textContent = i18nT('timelapse.choose_the_start_time_the_stop');
@@ -515,6 +569,6 @@
           });
         }));
         box.appendChild(msg);
-        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:11px;", i18nT('timelapse.uses_the_cameras_and_layout_from')));
+        box.appendChild(cameraEl("div", "color:var(--c-sec,#b0bec5);font-size:12px;", i18nT('timelapse.uses_the_cameras_and_layout_from')));
         return box;
       }

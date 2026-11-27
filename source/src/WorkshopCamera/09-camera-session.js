@@ -5,7 +5,7 @@
       // identity ("full" for workshopIdentityView(null)) nor from an "na" list; every change of identity (09-session-change.js) drops what the previous
       // person read (panel, list, day key) and builds again, by itself: signing in shows the image without a reload and without tapping Retry.
       // Where the panel would be there is a cover (N4) while the camera cannot be shown; the launcher tile opens it.
-      // Owner rule (2026-11-06, capture 9): without a session (or with a role that has no camera) NOTHING opens from the launcher: the launcher of the
+      // Project rule (2026-11-06, capture 9): without a session (or with a role that has no camera) NOTHING opens from the launcher: the launcher of the
       // bar shows a lock with the reason and its tap signs in (cameraSessionLock / cameraSessionLockTap). The cover for those two causes is shown
       // only when the viewer was OPEN and the permission went away (a sign-out, another person): then it takes the place of the viewer, same spot
       // and size, with the reason and the sign-in button. The causes that are not about the person (down, empty, loading) keep the cover from the tile.
@@ -26,9 +26,72 @@
         return cameraSessionLockOf(cameraSessionCause());
       }
 
-      // The tap on a locked launcher (the bar, or the fallback button without a bar): the name + PIN dialog; a sign-in builds the viewer by itself
-      function cameraSessionLockTap() {
-        if (typeof workshopLogin === "function") workshopLogin();
+      // The tap on a locked launcher (the bar, or the fallback button without a bar): the name + PIN dialog; a sign-in builds the viewer by itself.
+      // openAfter === true (the launcher): once the PIN is accepted the viewer the person asked for also OPENS by itself (owner 2026-11-23, note 10: "after
+      // the PIN nothing opens, I have to tap a second time"); the "Change role" button of the cover passes nothing (the viewer was open: it comes back open).
+      // A cancelled dialog does nothing.
+      function cameraSessionLockTap(openAfter) {
+        if (typeof workshopLogin !== "function") return;
+        var asked = workshopLogin();
+        if (openAfter !== true || !asked || typeof asked.then !== "function") return;
+        asked.then(function (ok) {
+          if (ok) cameraOpenAfterSignIn();
+        }, function () {});
+      }
+
+      // ---- Open after the PIN (note 10) ----
+      // The sign-in starts a rebuild for the new person (cameraRebuild: the panel goes, the list and the relay are read again, a new panel is built), so the
+      // viewer usually does not exist yet when the PIN is accepted: the wish is kept for a short while and the build that follows opens it (createCameraWidgets).
+      // A role still without the camera builds nothing and the wish runs out by itself.
+      var CAMERA_OPEN_WISH_MS = 15000;
+      var cameraOpenWishAt = 0; // when the person asked to open the viewer through the PIN (0 = no wish)
+
+      // Pure: is a wish made at `at` (ms) still alive at `now`?
+      function cameraOpenWishLive(at, now) {
+        return at > 0 && now >= at && now - at <= CAMERA_OPEN_WISH_MS;
+      }
+
+      // The PIN was accepted after a tap on the locked launcher (here, or the bar through openAfterSignIn in 20-main.js): open the viewer now when it is
+      // already built for this person and nothing locks it, else keep the wish for the build. Returns true only when the viewer is open: the bar asks
+      // again while it gets false (workshopLoginThen, for a few seconds), and the wish still opens the viewer when the build ends later than that.
+      function cameraOpenAfterSignIn() {
+        if (pluginStopped) return false;
+        if (cameraPanelEl && !cameraSessionLock()) {
+          cameraOpenWishAt = 0;
+          if (!isCameraOpen()) cameraExpand();
+          return true;
+        }
+        if (!cameraOpenWishLive(cameraOpenWishAt, Date.now())) { // the first ask of this sign-in (the bar repeats it): the wish and its deadline
+          cameraOpenWishAt = Date.now();
+          cameraOpenRoleTellLater(cameraOpenWishAt);
+        }
+        return false;
+      }
+
+      // The PIN was accepted but the role of that person still cannot see the camera: once the permissions had time to arrive (the same 3 s the bar
+      // waits), a wish that is still waiting is told with the family's role refusal card ("Requires the role X", with "Change role"), never silent
+      // (ux review of note 10, 2026-11-23). A wish that was spent (the viewer opened) or replaced by a newer one tells nothing.
+      var CAMERA_ROLE_TELL_MS = 3000;
+      function cameraOpenRoleTellLater(at) {
+        setTimeout(function () {
+          var needed = cameraOpenRoleRefusal(pluginStopped ? 0 : cameraOpenWishAt, at, cameraSessionLock());
+          if (!needed) return;
+          cameraOpenWishAt = 0;
+          if (typeof workshopRefusalToast === "function") workshopRefusalToast("role", needed);
+        }, CAMERA_ROLE_TELL_MS);
+      }
+
+      // Pure: the role to name in the refusal card, or "" (nothing to tell): only for the wish made at `at`, still waiting, and a lock about the role
+      function cameraOpenRoleRefusal(wishAt, at, lock) {
+        if (!wishAt || wishAt !== at || !lock || lock.kind !== "role") return "";
+        return lock.needed || "operator";
+      }
+
+      // The build asks once whether the person is waiting for the viewer; the wish is spent either way
+      function cameraOpenWishTake() {
+        var live = cameraOpenWishLive(cameraOpenWishAt, Date.now());
+        cameraOpenWishAt = 0;
+        return live;
       }
 
       // Pure: what blocks the camera. f = { known, canView, signedOut, address (cameraAddressState), hasUrl }.
@@ -68,13 +131,13 @@
             cameraRebuild("retry");
           },
         });
-        // a role without the camera: the cover that blocks the open viewer offers the way out too (owner rule 2026-11-06): another person signs in
+        // a role without the camera: the cover that blocks the open viewer offers the way out too (project rule 2026-11-06): another person signs in
         if (cause.kind === "role" && typeof document !== "undefined" && typeof document.createElement === "function") {
           var change = document.createElement("button");
           change.type = "button";
           change.className = "wf-btn";
           change.textContent = i18nT("roles.change_role");
-          change.addEventListener("click", cameraSessionLockTap);
+          change.addEventListener("click", function () { cameraSessionLockTap(); });
           box.appendChild(change);
         }
         return box;
@@ -167,7 +230,7 @@
 
       // The launcher tile while there is no panel: it opens or closes the cover (never for a session or role cause: the launcher is locked then)
       function cameraSessionToggleCover() {
-        if (cameraSessionLock()) return cameraSessionLockTap();
+        if (cameraSessionLock()) return cameraSessionLockTap(true);
         cameraSessionCoverAt = null;
         cameraSessionCoverOpen = !document.getElementById(CAMERA_SESSION_COVER_ID);
         cameraSessionCoverRender();

@@ -9,6 +9,7 @@
       //   - the mosaic with all the cameras (the viewer's button and the "See all" of the page)
       //   - digital zoom and pan of the image (it moves nothing)
 
+      var CAMERA_ARM_MS = 4000; // = WORKSHOP_ARM_MS (src/_shared/00-arm.js); tests/arm-ms.test.js keeps them equal
       var CAMERA_MOSAIC_ID = "workshop-camera-mosaic";
 
       // ---- relay state (/state): the viewer reads it when it opens, the page every 3 s while it is open (the listeners repaint what shows it) ----
@@ -87,8 +88,8 @@
       function cameraBtn(text, estilo, onClick) {
         var st = estilo || "";
         var role = /border:1px solid #1976d2/.test(st) ? " ctl-on" : /background:#1976d2/.test(st) ? " wf-main" : /background:#c62828/.test(st) ? " ctl-danger" : /background:#ff8f00/.test(st) ? " wf-armed" : "";
-        var layout = st.replace(/(?:background|color|border)[a-z-]*:[^;]*;?/g, "");
-        var b = cameraEl("button", "padding:6px 10px;min-height:32px;touch-action:manipulation;" + layout, text);
+        var layout = st.replace(/(?:background|color|border)[a-z-]*:[^;]*;?/g, "").replace(/min-height:[^;]*;?/g, ""); // the height is the sheet's (32, the main one 36: 18-tl-settings.js)
+        var b = cameraEl("button", "touch-action:manipulation;" + layout, text);
         b.className = "wf-btn" + role;
         b.type = "button";
         b.addEventListener("pointerdown", function (ev) {
@@ -102,7 +103,20 @@
         return b;
       }
 
-      // Button with double tap (DESIGN.md 5): the second tap within 4 s
+      // An icon button of the page (32 px to see, touched over 40: 18-tl-settings.js): the family button with one mdi icon; its words are the name and the tooltip
+      function cameraIconBtn(icon, label, onClick) {
+        var b = cameraBtn("", "", onClick);
+        b.classList.add("ctl-icon-btn");
+        b.title = label;
+        b.setAttribute("aria-label", label);
+        var ic = cameraEl("span", "");
+        ic.className = "mdi " + icon;
+        ic.setAttribute("aria-hidden", "true");
+        b.appendChild(ic);
+        return b;
+      }
+
+      // Button with double tap (DESIGN.md 5): the second tap within CAMERA_ARM_MS (4 s)
       function cameraBtnDouble(text, confirmar, estilo, onClick) {
         var armed = null;
         var b = cameraBtn(text, estilo, function () {
@@ -113,7 +127,7 @@
               armed = null;
               b.textContent = text;
               b.classList.remove("wf-armed");
-            }, 4000);
+            }, CAMERA_ARM_MS);
             return;
           }
           clearTimeout(armed);
@@ -164,9 +178,11 @@
           return;
         }
         var background = cameraEl("div", "position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;");
+        workshopVeilClear(background); // owner's safety rule (2026-11-23): the dark background starts under DWC's top bar (its Emergency stop) and ends left of the control bar (its STOP)
         background.id = CAMERA_MOSAIC_ID;
         background.setAttribute("data-workshop-i18n", "");
-        var box = cameraEl("div", "width:min(1200px,94vw);max-height:90vh;overflow-y:auto;background:#1e272c;color:#eceff1;border-radius:10px;padding:12px;font:13px Roboto,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.6);");
+        // the box fits the cleared background (not the window): it never reaches under DWC's bar or the control bar
+        var box = cameraEl("div", "width:min(1200px,calc(100% - 24px));max-height:calc(100% - 24px);overflow-y:auto;background:#1e272c;color:#eceff1;border-radius:10px;padding:12px;box-sizing:border-box;font:13px Roboto,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,0.6);");
         background.appendChild(box);
         document.body.appendChild(background);
         var timers = [];
@@ -188,10 +204,10 @@
         });
         var cab = cameraEl("div", "display:flex;align-items:center;gap:8px;margin-bottom:8px;");
         cab.appendChild(cameraEl("div", "font-weight:bold;font-size:15px;flex:1;", i18nT('service.all_cameras')));
-        cab.appendChild(cameraEl("div", "font-size:11px;color:#b0bec5;", i18nT('service.tap_one_to_see_it_in')));
+        cab.appendChild(cameraEl("div", "font-size:12px;color:#b0bec5;", i18nT('service.tap_one_to_see_it_in')));
         cab.appendChild(cameraBtn(i18nT('common.close'), "", cerrar));
         box.appendChild(cab);
-        var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;");
+        var grid = cameraEl("div", "display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:10px;");
         box.appendChild(grid);
         var states = []; // [{rid, el, w}]: the line of each camera and the judgement of its picture
         var paintStates = function () { cameraMosaicPaintStates(states); };
@@ -207,7 +223,7 @@
             t.appendChild(im);
             var pie = cameraEl("div", "padding:6px 8px;background:#263238;");
             pie.appendChild(cameraEl("div", "font-weight:bold;", c.name + (c === elegida ? i18nT('service.in_the_viewer') : "")));
-            var est = cameraEl("div", "font-size:11px;");
+            var est = cameraEl("div", "font-size:12px;");
             pie.appendChild(est);
             t.appendChild(pie);
             grid.appendChild(t);
@@ -246,6 +262,38 @@
         }, 3000));
       }
 
+      // The inner size of a floating panel, kept by a ResizeObserver (it reads what the browser has just laid out): a wheel step, a drag or a pinch of the
+      // zoom only WRITE the transform and never read back the layout they have just changed (owner 2026-11-23, note 15; criteria C12). Returns { w, h },
+      // updated in place; onSize() runs after each observation. Not in the page yet: 0 x 0 until the first observation; closed (display none): the last size stays.
+      function cameraKeptSize(panel, onSize) {
+        var size = { w: panel.clientWidth, h: panel.clientHeight };
+        if (typeof ResizeObserver === "function") {
+          new ResizeObserver(function (entries) {
+            var r = entries && entries[0] && entries[0].contentRect;
+            if (r && r.width > 0 && r.height > 0) {
+              size.w = r.width;
+              size.h = r.height;
+            }
+            onSize();
+          }).observe(panel);
+        }
+        return size;
+      }
+
+      // Where a panel is on the screen (to turn a pointer into panel coordinates), read once per gesture: get(true) reads it (a pointerdown), get(false)
+      // reuses a read younger than 250 ms (the moves of the gesture, a burst of wheel steps) instead of reading it after each transform it wrote.
+      function cameraRectMemo(panel) {
+        var rect = null, at = 0;
+        return function (fresh) {
+          var now = Date.now();
+          if (fresh || !rect || now - at > 250) {
+            rect = panel.getBoundingClientRect();
+            at = now;
+          }
+          return rect;
+        };
+      }
+
       // ---- Digital zoom and pan ----
       // Wheel or +/- buttons; with zoom, dragging the image moves it (without zoom,
       // dragging moves the panel as always). Double tap: back to 1x.
@@ -260,8 +308,10 @@
         img.parentNode.insertBefore(frame, img);
         frame.appendChild(img);
         var orient = { rotation: 0, h: false, v: false };
+        var size = cameraKeptSize(panel, function () { box(); apply(); }); // no layout read in a gesture (note 15)
+        var panelRect = cameraRectMemo(panel);
         function box() {
-          var w = panel.clientWidth, h = panel.clientHeight;
+          var w = size.w, h = size.h;
           var de90 = orient.rotation % 180 !== 0;
           img.style.position = "absolute";
           img.style.width = (de90 ? h : w) + "px";
@@ -272,15 +322,11 @@
           // mirror first and then the turn (the order of Vision's /orientation)
           img.style.transform = (orient.rotation ? "rotate(" + orient.rotation + "deg) " : "") + (orient.h || orient.v ? "scale(" + (orient.h ? -1 : 1) + "," + (orient.v ? -1 : 1) + ")" : "");
         }
-        if (typeof ResizeObserver === "function") new ResizeObserver(function () { box(); apply(); }).observe(panel);
         box();
-        var mark = cameraEl("button", "position:absolute;right:4px;top:34px;height:22px;padding:0 7px;border-radius:11px;border:none;background:rgba(0,0,0,0.6);color:#fff;font:bold 11px Roboto,sans-serif;cursor:pointer;z-index:1;display:none;touch-action:none;");
-        mark.type = "button";
-        mark.title = i18nT('service.back_to_1x');
-        panel.appendChild(mark);
+        var mark = cameraZoomMark(panel); // 11-panel-parts.js: "2.0x" under the close button, a button of the top row's size
 
         function apply() {
-          var w = panel.clientWidth, h = panel.clientHeight;
+          var w = size.w, h = size.h;
           if (z <= 1.001) {
             z = 1;
             tx = 0;
@@ -306,8 +352,9 @@
         mark.addEventListener("pointerdown", function (ev) { ev.stopPropagation(); ev.preventDefault(); });
         mark.addEventListener("pointerup", function (ev) { ev.stopPropagation(); reset(); });
 
+        // not passive on purpose: the wheel zooms the picture and must not scroll the page behind the floating panel (listener on the panel only)
         panel.addEventListener("wheel", function (ev) {
-          var r = panel.getBoundingClientRect();
+          var r = panelRect(false);
           ev.preventDefault();
           zoomIn(z * (ev.deltaY < 0 ? 1.25 : 0.8), ev.clientX - r.left, ev.clientY - r.top);
         }, { passive: false });
@@ -318,7 +365,7 @@
         var pinch = null;
         var lastTouch = 0;
         layer.addEventListener("pointerdown", function (ev) {
-          var r = panel.getBoundingClientRect();
+          var r = panelRect(true);
           var ahora = Date.now();
           if (ahora - lastTouch < 300 && z > 1) {
             reset();
@@ -344,7 +391,7 @@
         layer.addEventListener("pointermove", function (ev) {
           if (!ptrs[ev.pointerId]) return;
           ev.stopPropagation();
-          var r = panel.getBoundingClientRect();
+          var r = panelRect(false); // the one read at the pointerdown of this gesture (again at most every 250 ms)
           ptrs[ev.pointerId] = { x: ev.clientX - r.left, y: ev.clientY - r.top };
           var ids = Object.keys(ptrs);
           if (pinch && ids.length === 2) {
@@ -373,7 +420,7 @@
             orient = { rotation: ((o && o.rotation) || 0) % 360, h: !!(o && o.h), v: !!(o && o.v) };
             box();
           },
-          more: function () { zoomIn(z * 1.5, panel.clientWidth / 2, panel.clientHeight / 2); },
-          minus: function () { zoomIn(z / 1.5, panel.clientWidth / 2, panel.clientHeight / 2); },
+          more: function () { zoomIn(z * 1.5, size.w / 2, size.h / 2); },
+          minus: function () { zoomIn(z / 1.5, size.w / 2, size.h / 2); },
         };
       }

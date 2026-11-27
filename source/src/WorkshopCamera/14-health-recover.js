@@ -1,4 +1,4 @@
-      // ---- The help to bring a camera back: a short checklist, cheapest first, under the picture it is about (owner report 2026-11-03) ----
+      // ---- The help to bring a camera back: a short checklist, cheapest first, under the picture it is about (user report 2026-11-03) ----
       //
       // Pure first: which steps for which state and which view (cameraHealthSteps, tests/camera-health.test.js). Then the panel
       // (cameraHealthPanel): the state line (a dot and the words of 14-health.js), one hint, and the steps. Every step carries its help (what it
@@ -87,17 +87,22 @@
         var ui = { W: W, o: o || {}, shown: null, results: {}, rs: null, relayBtn: null };
         ui.root = cameraEl("div", "");
         ui.root.className = "ctl-health";
+        // ONE line under the picture (CAMARA-REDISENO.md): the state (a dot and its words) and, beside it, the hint
+        var stateRow = cameraEl("div", "");
+        stateRow.className = "ctl-health-row";
         ui.line = cameraEl("div", "");
         ui.line.className = "wf-state";
         ui.hint = cameraEl("div", "");
         ui.hint.className = "ctl-muted";
+        stateRow.appendChild(ui.line);
+        stateRow.appendChild(ui.hint);
         ui.box = cameraEl("details", "");
         ui.box.className = "ctl-recover";
         ui.box.appendChild(cameraEl("summary", null, i18nT("recover.title")));
         ui.body = cameraEl("div", "");
         ui.body.className = "ctl-rsteps";
         ui.box.appendChild(ui.body);
-        [ui.line, ui.hint, ui.box].forEach(function (n) { ui.root.appendChild(n); });
+        [stateRow, ui.box].forEach(function (n) { ui.root.appendChild(n); });
         parent.appendChild(ui.root);
         ui.paint = function () { cameraHealthPaint(ui); };
         ui.paint();
@@ -110,6 +115,7 @@
         ui.line.className = "wf-state " + cameraHealthTone(h.state);
         ui.line.textContent = cameraHealthWord(h, i18nT);
         ui.hint.textContent = cameraHealthHint(h, i18nT);
+        ui.hint.title = ui.hint.textContent; // the line is cut with an ellipsis: the whole hint stays one hover away
         var steps = cameraHealthSteps(h.state, cameraRecoverCaps(ui.W.cam));
         var key = steps.join(",");
         ui.box.style.display = steps.length ? "" : "none";
@@ -118,40 +124,50 @@
           ui.body.textContent = "";
           ui.results = {};
           steps.forEach(function (id, i) { ui.body.appendChild(cameraRecoverStep(ui, id, i + 1)); });
+          // ONE help at the foot of the list, for every step (under the steps, inside the fold of the recovery)
+          if (ui.help && ui.help.parentNode && typeof ui.help.parentNode.removeChild === "function") ui.help.parentNode.removeChild(ui.help);
+          ui.help = steps.length ? cameraRecoverHelp(ui, steps) : null;
+          if (ui.help) ui.box.appendChild(ui.help);
           if (steps.length && !ui.o.compact) ui.box.open = true; // compact (a tile of the grid of all the cameras): the help stays folded, it was a long strip
         }
         cameraRecoverResults(ui);
       }
 
-      // One step: number, name, the button (when the plugin does it), how to do it, the help fold (what, what for, without it) and the result.
+      // One step, compact (CAMARA-REDISENO.md: the list used to be 7 folds and 900 px): a row of 40 px with the number, the name and, at the right, the
+      // button when the plugin does it; under it only what the step needs on screen (the commands of the console, the address and the way to the
+      // Cameras tab) and the result of what was tried. How to do it, what it is, what for and without it are in the ONE help at the foot.
       function cameraRecoverStep(ui, id, n) {
         var row = cameraEl("div", "");
         row.className = "ctl-rstep";
         var head = cameraEl("div", "");
         head.className = "ctl-rstep-h";
         head.appendChild(cameraEl("span", null, String(n))).className = "ctl-rnum";
-        head.appendChild(cameraEl("b", null, i18nT("recover." + id)));
+        var name = head.appendChild(cameraEl("span", null, i18nT("recover." + id)));
+        name.className = "ctl-rname";
+        name.title = cameraRecoverHow(ui, id); // the how, one hover away; the help at the foot says it too
         var btn = cameraRecoverButton(ui, id);
         if (btn) head.appendChild(btn);
         row.appendChild(head);
-        row.appendChild(cameraEl("div", null, cameraRecoverHow(ui, id))).className = "ctl-muted";
         var extra = cameraRecoverExtra(ui, id);
         if (extra) row.appendChild(extra);
-        var help = cameraEl("details", "");
-        help.className = "ctl-rhelp";
-        help.appendChild(cameraEl("summary", null, i18nT("recover.what_is_it")));
-        [["h_what", "_what"], ["h_why", "_why"], ["h_missing", "_missing"]].forEach(function (p) {
-          var l = cameraEl("div", "");
-          l.appendChild(cameraEl("b", null, i18nT("recover." + p[0]) + " "));
-          l.appendChild(cameraEl("span", null, i18nT("recover." + id + p[1])));
-          help.appendChild(l);
-        });
-        row.appendChild(help);
         var res = cameraEl("div", "");
         res.className = "ctl-rresult";
         ui.results[id] = res;
         row.appendChild(res);
         return row;
+      }
+
+      // The ONE help of the list (the family's fold): for each step its how, then what it is, what for and what happens without it.
+      function cameraRecoverHelp(ui, steps) {
+        var rows = [];
+        steps.forEach(function (id, i) {
+          var name = (i + 1) + ". " + i18nT("recover." + id);
+          rows.push([name, cameraRecoverHow(ui, id)]);
+          rows.push([i18nT("recover.h_what"), i18nT("recover." + id + "_what")]);
+          rows.push([i18nT("recover.h_why"), i18nT("recover." + id + "_why")]);
+          rows.push([i18nT("recover.h_missing"), i18nT("recover." + id + "_missing")]);
+        });
+        return workshopHelpFoldEl({ rows: rows });
       }
 
       // The "how" of a step, with the address of the camera where it helps.
@@ -169,8 +185,11 @@
           code.textContent = "ping -c 3 " + host + "\ncurl -s --max-time 4 http://" + host + "/status";
           return code;
         }
-        if (id === "network" && ui.o.go && cameraCanDo("cameras")) {
-          return cameraBtn(i18nT("recover.network_go"), "align-self:flex-start;", function () { ui.o.go("cameras"); });
+        if (id === "network") { // the address the person has to look for stays on screen (the rest of the how is in the help at the foot)
+          var box = cameraEl("div", "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:28px;");
+          box.appendChild(cameraEl("span", null, cameraRecoverAddress(ui.W.cam) || i18nT("recover.no_address"))).className = "ctl-muted";
+          if (ui.o.go && cameraCanDo("cameras")) box.appendChild(cameraBtn(i18nT("recover.network_go"), "", function () { ui.o.go("cameras"); }));
+          return box;
         }
         if (id === "relay") return cameraReasonEl("relay"); // 09-camera-access-reasons.js: why the service refuses to stop and start the video system (under the step, beside its button)
         return null;

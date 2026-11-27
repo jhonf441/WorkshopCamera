@@ -1,4 +1,4 @@
-      // ---- One judgement of how a camera is doing (owner report 2026-11-03) ----
+      // ---- One judgement of how a camera is doing (user report 2026-11-03) ----
       //
       // "The main camera does not respond, yet Live says it is live over a black picture, and the Timelapse page says the camera does not
       // respond." Each place judged on its own: the viewer's badge said LIVE because the video mode had been chosen (not because a frame had
